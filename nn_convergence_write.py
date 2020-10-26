@@ -9,10 +9,10 @@ import sys
 k_enlarge = 100
 
 h_metropolis = 0.1
-num_samples = 30000
+num_samples = 50000
 skip_n_samples = 4
 L_domain = 20
-conv_samples = 2000
+conv_samples = 10000
 parallel = True
     
 # Potential for the neural network training

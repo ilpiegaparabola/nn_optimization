@@ -273,6 +273,18 @@ def convergenceMetropolis(start_x, h, pot, n_samples,
     return expectations, average_accept
 
 
+# Given a list of 1-dimensional samples, return the confidence interval
+def mean_variance1d(samples1d):
+    mean = np.mean(samples1d)
+    sigma = 0.
+    n = len(samples1d)
+    for i in range(n):
+        sigma += (samples1d[i] - mean) ** 2.
+    sigma = np.sqrt(sigma / (n - 1))
+    return mean, sigma
+
+
+
 # Given a set of samples X, find out the optimal number of centroids
 def elbow_search(X, min_modes=2, max_modes=20):
     print("Performing various k-means clustering: elbow search")
