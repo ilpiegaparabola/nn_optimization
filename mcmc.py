@@ -223,7 +223,7 @@ def chain_rwMetropolis(start_x, h, potential, n_samples,
 
 def convergenceMetropolis(start_x, h, pot, n_samples, 
         skip_rate, L, conv_samples, parallel = True):
-    print(" ---- CONVERGENCE ANALYSIS ---- ")
+    print(" ---- Samples for studying CONVERGENCE ---- ")
     print("Expectations of", conv_samples, "Markov Chains.")
     print("Running the first Markov chain...")
 

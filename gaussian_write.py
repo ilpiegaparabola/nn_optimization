@@ -11,15 +11,15 @@ def U(x):
 def gradU(x):
     return x
 
-h_metropolis = 5
-num_samples = 50000
+h_metropolis = 1
+num_samples = 10000
 skip_n_samples = 5
-conv_samples = 100
+conv_samples = 500
 L_domain = 10
 parallel = True
 
 SAMPLING_SINGLE_CHAIN = True
-SAMPLING_TO_CHECK_CONVERGENCE = False
+SAMPLING_TO_CHECK_CONVERGENCE = True
 
 if SAMPLING_SINGLE_CHAIN:
     print("Sampling a single chain")

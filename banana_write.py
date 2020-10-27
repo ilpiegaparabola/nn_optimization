@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import mcmc
+import sys
  
 
 # Potential for the banana distribution
@@ -13,14 +14,14 @@ def ban_gradU(x):
                             20. * (x[1] - x[0]**2)])
 
 h_metropolis = 0.1
-num_samples = 250000
-skip_n_samples = 1
+num_samples = 10000
+skip_n_samples = 5
 conv_samples = 1000
 L_domain = 10
 parallel = True
 
 SAMPLING_SINGLE_CHAIN = True
-SAMPLING_TO_CHECK_CONVERGENCE = False
+SAMPLING_TO_CHECK_CONVERGENCE = True
 
 if SAMPLING_SINGLE_CHAIN:
     X, runtime, _, _ = mcmc.chain_rwMetropolis(np.array([4, 1]), h_metropolis,
