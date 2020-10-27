@@ -35,7 +35,7 @@ if STUDY_SINGLE_CHAIN:
     print("Read", len(X), "samples of dimension", len(X[0]))
     
     # Find the optimal number of clustering
-    #mcmc.elbow_search(X, 1, 20)
+    mcmc.elbow_search(X, 1, 20)
     ncent = int(input("Enter the number of centroids: "))
     # Store the clusters, which will be candidate modes
     centroids, freq = mcmc.detailed_clustering (X, ncent, ban_U)
@@ -64,7 +64,7 @@ if STUDY_SINGLE_CHAIN:
     plt.show()
 
 
-if STUDY_CONVERGENCE = True#True
+if STUDY_CONVERGENCE:
     print("Reading the results about CONVERGENCE")
     # Open the file containing the list of samples
     filename = "banana_convergence.smp"
@@ -85,6 +85,7 @@ if STUDY_CONVERGENCE = True#True
     samples_file.close()
     print("Read", len(X), "samples of dimension", len(X[0]))
 
+    m = len(X[0])
     # Computing the confidence interval for each marginal
     for i in range(m):
         # Compute the 95% confidence interval

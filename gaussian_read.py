@@ -81,7 +81,8 @@ if STUDY_CONVERGENCE:
     X = np.asanyarray(X)
     samples_file.close()
     print("Read", len(X), "samples of dimension", len(X[0]))
-
+    
+    m = len(X[0])
     # Computing the confidence interval for each marginal
     for i in range(m):
         # Compute the 95% confidence interval
