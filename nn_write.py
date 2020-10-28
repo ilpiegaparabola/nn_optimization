@@ -6,11 +6,11 @@ import random
 import sys
 
 k_enlarge = 100
-h_metropolis = 1
+h_metropolis = 50
 num_samples = 100000
-skip_n_samples = 10
+skip_n_samples = 2
 conv_samples = 1000
-L_domain = 20
+L_domain = 12
 parallel = True
 
 # Potential for the neural network training
