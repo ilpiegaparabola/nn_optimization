@@ -6,9 +6,9 @@ import random
 import sys
 
 k_enlarge = 100
-h_metropolis = 0.1
-num_samples = 20000
-skip_n_samples = 3
+h_metropolis = 1
+num_samples = 100000
+skip_n_samples = 10
 conv_samples = 1000
 L_domain = 20
 parallel = True
@@ -29,7 +29,7 @@ def auxiliary_gradient(params_together):
 
 
 SAMPLING_SINGLE_CHAIN = True
-SAMPLING_TO_CHECK_CONVERGENCE = False
+SAMPLING_TO_CHECK_CONVERGENCE = True
 
 
 if SAMPLING_SINGLE_CHAIN:
