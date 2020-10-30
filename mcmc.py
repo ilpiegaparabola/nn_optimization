@@ -96,67 +96,21 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
     # had a local random number generator, allowing parallelization
     if (local_sampler == None):
         local_sampler = np.random
-    y = local_sampler.uniform(-L, L, len(x))
-#    y = x + sqrt(h) * \
-#        local_sampler.multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-        #default_rng().multivariate_normal(np.zeros(len(x)),np.identity(len(x)))
-# Check that the proposed point falls into the domain
-#    attempts = 1
-#    while(not checkDomain(y, L)):
-#            y = x + sqrt(h) * \
-#        local_sampler.multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-     #default_rng().multivariate_normal(np.zeros(len(x)), 
-            #                                            np.identity(len(x)))
-#            attempts += 1
-        
-#    if (verbose and (attempts > 20)):
-#        print("Warning: more than 20 attempts to stay in domain")
-    log_alpha = min(potential(x) - potential(y), 0)
-    if log(local_sampler.uniform()) < log_alpha:
-        return y, 1
-    else:
-        return x, 0
-
-# Single step x_n -> x_n+1 for the Random Walk Metropolis
-def OK_rwMetropolis(x, h,potential, L=10, verbose = True, local_sampler = None):
-    # If None, the local_sampler corresponds to the global numpy sampler,
-    # otherwise is one given from the complete chain, so that each chain
-    # had a local random number generator, allowing parallelization
-    if (local_sampler == None):
-        local_sampler = np.random
+#    y = local_sampler.uniform(-L, L, len(x))
     y = x + sqrt(h) * \
         local_sampler.multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-        #default_rng().multivariate_normal(np.zeros(len(x)),np.identity(len(x)))
+
 # Check that the proposed point falls into the domain
     attempts = 1
     while(not checkDomain(y, L)):
             y = x + sqrt(h) * \
         local_sampler.multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-     #default_rng().multivariate_normal(np.zeros(len(x)), 
-            #                                            np.identity(len(x)))
             attempts += 1
         
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
-
     log_alpha = min(potential(x) - potential(y), 0)
     if log(local_sampler.uniform()) < log_alpha:
-        return y, 1
-    else:
-        return x, 0
-
-
-# Alternative for debug
-def DEBUG_rwMetropolis(x, h, potential):
-    print("Starting energy: ", potential(x))
-    y = x + sqrt(h) * \
-        default_rng().multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-    alpha = min(1, exp(potential(x) - potential(y)))
-    print("Final energy: ", potential(y))
-    p = np.random.uniform()
-    print("alpha = ", alpha, "p = ", p)
-    if (p  < alpha):
-        print("Accepted")
         return y, 1
     else:
         return x, 0
