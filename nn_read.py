@@ -20,7 +20,7 @@ def auxiliary_gradient(params_together):
             nn_potential.y, b2, b3, b4, W2, W3, W4)
 
 
-STUDY_SINGLE_CHAIN = False #True #False
+STUDY_SINGLE_CHAIN = True #False
 STUDY_CONVERGENCE = True#True
 
 if STUDY_SINGLE_CHAIN:

@@ -25,6 +25,9 @@ def verlet(x, v, T, h, gradient):
     return x, v
 
 
+#### PART 1: single steps for various chains ####
+
+# TO RENAME AND CORRECT
 # Single step (x_n, v_n) -> (x_n+1, v_n+1) for the uHMC MCMC
 def uHMC (x, v, T, h, gamma, gradient):
     d = len(x)
@@ -33,7 +36,223 @@ def uHMC (x, v, T, h, gamma, gradient):
     v = np.sqrt(1. - gamma * gamma) * v + gamma * z
     return x, v
 
-   
+
+# TO RENAME
+# Single step x_n -> x_n+1 for the Random Walk Metropolis
+def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
+    # If None, the local_sampler corresponds to the global numpy sampler,
+    # otherwise is one given from the complete chain, so that each chain
+    # had a local random number generator, allowing parallelization
+    d = len(x)
+    if (local_sampler == None):
+        local_sampler = np.random
+    y = x + sqrt(h) * \
+        local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
+    # Check that the proposed point falls into the domain
+    attempts = 1
+    while(not checkDomain(y, L)):
+            y = x + sqrt(h) * \
+        local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
+            attempts += 1
+    if (verbose and (attempts > 20)):
+        print("Warning: more than 20 attempts to stay in domain")
+    log_alpha = min(potential(x) - potential(y), 0)
+    if log(local_sampler.uniform()) < log_alpha:
+        return y, 1
+    else:
+        return x, 0
+
+
+# Single step x_n -> x_n+1 for the Unadjusted Langevin Algorithm
+def ulaStep(x, h, U, gradU, L, verbose = True, local_sampler = None):
+    # If None, the local_sampler corresponds to the global numpy sampler,
+    # otherwise is one given from the complete chain, so that each chain
+    # had a local random number generator, allowing parallelization
+    d = len(x)
+    mean = np.zeros(d)
+    cov = np.identity(d)
+    if (local_sampler == None):
+        local_sampler = np.random
+    y = x - h * gradU(x) + np.sqrt(2. * h) * \
+                 local_sampler.multivariate_normal(mean, cov)
+    # Check that the proposed point falls into the domain
+    attempts = 1
+    while(not checkDomain(y, L)):
+            y = x - h * gradU(x) + np.sqrt(2. * h) * \
+                local_sampler.multivariate_normal(meann, cov)
+            attempts += 1
+    if (verbose and (attempts > 20)):
+        print("Warning: more than 20 attempts to stay in domain")
+    return y
+
+
+def malaStep(x, h, U, gradU, L, verbose = True, local_sampler = None):
+    # If None, the local_sampler corresponds to the global numpy sampler,
+    # otherwise is one given from the complete chain, so that each chain
+    # had a local random number generator, allowing parallelization
+    d = len(x)
+    mean = np.zeros(d)
+    cov = np.identity(d)
+    if (local_sampler == None):
+        local_sampler = np.random
+    y = x - h * gradU(x) + np.sqrt(2. * h) * \
+                 local_sampler.multivariate_normal(mean, cov)
+    # Check that the proposed point falls into the domain
+    attempts = 1
+    while(not checkDomain(y, L)):
+            y = x - h * gradU(x) + np.sqrt(2. * h) * \
+                local_sampler.multivariate_normal(meann, cov)
+            attempts += 1
+    if (verbose and (attempts > 20)):
+        print("Warning: more than 20 attempts to stay in domain")
+    # Now correct with a Matropolis step
+    Gxy = U(y) - U(x) - (y-x) * (gradU(x) + gradU(y)) / 2. + \
+            (h/4.) * (np.fabs(gradU(y))**2. - np.fabs(gradU(x))**2)
+    log_alpha = max( -Gxy, 0)
+    if log(local_sampler.uniform()) < log_alpha:
+        return y, 1
+    else:
+        return x, 0
+
+
+
+### PART 2: Complete Monte Carlo Chains #####
+
+# Complete ULA chain
+def ulaChain(start_x, h, U, gradU, n_samples,
+        skip_rate=5, L=10, verbose = True, seed = None):
+    # Local random sampler, to allow parallelization
+    chain_sampler = np.random.RandomState(seed)
+    # Burning-time rate. 5 = 20%
+    bt_rate = 5
+    # n_samples is the length of the chain with no burning time
+    total_samples = bt_rate * n_samples / (bt_rate - 1)
+    # use the bt_rate to obtain the number of discarded samples
+    bt = int (total_samples / bt_rate)
+    # Run a single chain step and compute the expected running time
+    start_time = time.time()
+    xnew  = ulaStep(start_x, h, U, gradU, L,verbose, chain_sampler)
+    time_one_sample = time.time() - start_time
+    time_burning = time_one_sample * (bt - 1) 
+    time_total = time_burning + n_samples * time_one_sample * skip_rate
+    if (verbose):
+        print("Approximated total running time: ", 
+            str(datetime.timedelta(seconds = int(time_total))))
+        print("Approximated burning time...", 
+            str(datetime.timedelta(seconds = int(time_burning))))
+#    input("Press ENTER to proceed.")
+        print("Burning time started...")
+    for i in range(bt - 1):
+        xnew = ulaStep(xnew, h, U, gradU, L, verbose, chain_sampler)
+
+    # Produce the first valid sample, and start counting acceptance rate
+    if (verbose):
+        print("Markov chain started!")
+    x_samples = []
+    xnew = ulaStep(xnew, h, U, gradU, L, verbose, chain_sampler)
+    x_samples.append(xnew)
+
+    # Append all the remaining valid samples, one every skip_rate samples
+    for i in range(1, n_samples):
+        for l in range(skip_rate):
+            xnew = ulaStep(xnew,h, U, gradU, L, verbose, chain_sampler)
+        x_samples.append(xnew)
+#        void = input("DEBUG: press enter for the next sample")
+        if (verbose and (i % 2000 == 0)):
+            print("Sample #", i)
+#            print(x_samples[i])
+    if (verbose):
+        print("--- end of the chain ---\nBurning samples: ", bt)
+        print("Skip rate: ", skip_rate, "\nEffective samples: ", n_samples)
+        print("Total samples: ", bt+n_samples*skip_rate,
+                " = burning_samples + ", "skip_rate * Effective samples")
+
+    runtime = str(datetime.timedelta(seconds = int(time.time()-start_time)))+ \
+       " skip_rate = " + str(skip_rate) + "Domain: " + str(L)
+
+    if (verbose):
+        print("Actual duration = " + runtime)
+    x_samples = np.asanyarray(x_samples) 
+    expect = sum([x for x in x_samples]) / len(x_samples)
+    print("Chain expectation: ", expect)
+    return x_samples, runtime, expect
+
+ 
+# Complete MALA chain
+def malaChain(start_x, h, U, gradU, n_samples,
+        skip_rate=5, L=10, verbose = True, seed = None):
+    # Local random sampler to allow parallelization
+    chain_sampler = np.random.RandomState(seed)
+    # Burning-time rate. 5 = 20%
+    bt_rate = 5
+    # n_samples is the length of the chain with no burning time
+    # We compute total_samples, the total lentgh included the burning time
+    total_samples = bt_rate * n_samples / (bt_rate - 1)
+    # use the bt_rate to obtain the number of discarded samples
+    bt = int (total_samples / bt_rate)
+
+    # Run a single chain step and compute the expected running time
+    start_time = time.time()
+    accept_rate, is_accepted = 0, 0
+    xnew, is_accepted  = malaStep(start_x, h, U, gradU, L, 
+                                        verbose, chain_sampler)
+    time_one_sample = time.time() - start_time
+
+    time_burning = time_one_sample * (bt - 1) 
+    time_total = time_burning + n_samples * time_one_sample * skip_rate
+    if (verbose):
+        print("Approximated total running time: ", 
+            str(datetime.timedelta(seconds = int(time_total))))
+        print("Approximated burning time...", 
+            str(datetime.timedelta(seconds = int(time_burning))))
+#    input("Press ENTER to proceed.")
+        print("Burning time started...")
+    for i in range(bt - 1):
+        xnew, is_accepted  = malaStep(xnew, h, U, gradU, L, 
+                                                verbose, chain_sampler)
+
+    # Produce the first valid sample, and start counting acceptance rate
+    if (verbose):
+        print("Markov chain started!")
+    x_samples = []
+    xnew, is_accepted = malaStep(xnew, h, U, gradU, L,
+                                                verbose, chain_sampler)
+    accept_rate += is_accepted
+    x_samples.append(xnew)
+
+    # Append all the remaining valid samples, one every skip_rate samples
+    for i in range(1, n_samples):
+        for l in range(skip_rate):
+#        xnew, is_accepted = rwMetropolis(x_samples[i-1], h, potential)
+            xnew, is_accepted = malaStep(xnew,h, U, gradU, L,
+                                                verbose, chain_sampler)
+            accept_rate += is_accepted
+        x_samples.append(xnew)
+#        void = input("DEBUG: press enter for the next sample")
+        if (verbose and (i % 2000 == 0)):
+            print("Sample #", i)
+#            print(x_samples[i])
+
+    accept_rate = int(accept_rate * 100. / (n_samples * skip_rate))
+    if (verbose):
+        print("--- end of the chain ---\nBurning samples: ", bt)
+        print("Skip rate: ", skip_rate, "\nEffective samples: ", n_samples)
+        print("Total samples: ", bt+n_samples*skip_rate,
+                " = burning_samples + ", "skip_rate * Effective samples")
+
+    runtime = str(datetime.timedelta(seconds = int(time.time()-start_time)))+ \
+       " accept_rate: " + str(accept_rate) + "%, skip_rate = " + str(skip_rate)\
+       + "Domain: " + str(L)
+
+    if (verbose):
+        print("Actual duration = " + runtime)
+    x_samples = np.asanyarray(x_samples) 
+    expect = sum([x for x in x_samples]) / len(x_samples)
+    print("Chain expectation: ", expect)
+    return x_samples, runtime, accept_rate, expect
+
+
+# TO REWRITE
 #Complete uHMC sampler, i.e. repeating uHMC multiple times
 def chain_uHMC(start_x, T, h, gamma, gradient, n_samples):
     # Burning-time rate. 5 = 20%
@@ -87,33 +306,6 @@ def chain_uHMC(start_x, T, h, gamma, gradient, n_samples):
 # every single file refering to it. But I will do.
 def sample_uHMC(start_x, T, h, gamma, gradient, n_samples):
     return chain_uHMC(start_x, T, h, gamma, gradient, n_samples)
-
-
-# Single step x_n -> x_n+1 for the Random Walk Metropolis
-def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
-    # If None, the local_sampler corresponds to the global numpy sampler,
-    # otherwise is one given from the complete chain, so that each chain
-    # had a local random number generator, allowing parallelization
-    if (local_sampler == None):
-        local_sampler = np.random
-#    y = local_sampler.uniform(-L, L, len(x))
-    y = x + sqrt(h) * \
-        local_sampler.multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-
-# Check that the proposed point falls into the domain
-    attempts = 1
-    while(not checkDomain(y, L)):
-            y = x + sqrt(h) * \
-        local_sampler.multivariate_normal(np.zeros(len(x)), np.identity(len(x)))
-            attempts += 1
-        
-    if (verbose and (attempts > 20)):
-        print("Warning: more than 20 attempts to stay in domain")
-    log_alpha = min(potential(x) - potential(y), 0)
-    if log(local_sampler.uniform()) < log_alpha:
-        return y, 1
-    else:
-        return x, 0
 
 
 # Complete Random Walk Metropolis chain
@@ -202,6 +394,9 @@ def chain_rwMetropolis(start_x, h, potential, n_samples,
 #    print("W4 = ", W4)
     return x_samples, runtime, accept_rate, expect
 
+################################################################
+#################### PART 3: CONVERGENCE #################
+#########################################################
 
 def convergenceMetropolis(start_x, h, pot, n_samples, 
         skip_rate, L, conv_samples, parallel = True):
@@ -254,6 +449,107 @@ def convergenceMetropolis(start_x, h, pot, n_samples,
     # Return the list of all the expectations, and the avergace accp rate
     return expectations, average_accept
 
+
+# Checking the convergence for the ULA implementation
+def ulaConvergence(start_x, h, U, gradU, n_samples, 
+        skip_rate, L, conv_samples, parallel = True):
+    print(" ---- Samples for studying ULA CONVERGENCE ---- ")
+    print("Expectations of", conv_samples, "Markov Chains.")
+    print("Running the first Markov chain...")
+
+    # List of all the computed expectations and a function to append to them
+    # the results of a metropolis run. mcmc[2] is the expectation
+    expectations = []
+    def add_expect(mcmc_result):
+        expectations.append(mcmc_result[2])
+
+    # Run conv_samples Metropolis instance, storing all the expectation vals
+    start_time = time.time()
+    add_expect(ulaChain(start_x, h, U, gradU, n_samples, 
+        skip_rate, L, False, None))
+    linear_run_time = int((time.time() - start_time) * conv_samples) 
+    print("Approximated MAX running time: " + \
+            str(datetime.timedelta(seconds = linear_run_time)))
+
+    # Running conv_samples mcmc chains
+    if (parallel):
+        print("Parallelized!")
+        print("Approx. MIN running time: " + \
+           str(datetime.timedelta(seconds = linear_run_time / mp.cpu_count())))
+        pool = mp.Pool(mp.cpu_count())
+        for j in range(1, conv_samples):
+            pool.apply_async(ulaChain,
+                    args=(start_x, h, U, gradU, 
+                        n_samples, skip_rate, L, False, j),
+                    callback=add_expect)
+        pool.close()
+        pool.join()
+    else:
+        print("WARNING: NOT PARALLELIZED")
+        for i in range(1, conv_samples):
+            print("***CONV*** Expectation sample # ", i)
+            add_expect(ulaChain(start_x, h, U, gradU, pot, n_samples, 
+                                    skip_rate, L, False, None))
+    print("Actual running time: ", 
+            str(datetime.timedelta(seconds=int(time.time() - start_time))))
+    # Return the list of all the expectations, and the avergace accp rate
+    return expectations
+
+
+# Convergence in the case of MALA 
+def malaConvergence(start_x, h, U, gradU, n_samples, 
+        skip_rate, L, conv_samples, parallel = True):
+    print(" ---- Samples for studying MALA CONVERGENCE ---- ")
+    print("Expectations of", conv_samples, "Markov Chains.")
+    print("Running the first Markov chain...")
+
+    # List of all the computed expectations and a function to append to them
+    # the results of a metropolis run. mcmc[2] is the expectation
+    expectations = []
+    accp_rates = []
+    def add_expect(mcmc_result):
+        expectations.append(mcmc_result[3])
+        accp_rates.append(mcmc_result[2])
+
+    # Run conv_samples Metropolis instance, storing all the expectation vals
+    start_time = time.time()
+    add_expect(malaChain(start_x, h, U, gradU, n_samples, 
+        skip_rate, L, False, None))
+    linear_run_time = int((time.time() - start_time) * conv_samples) 
+    print("Approximated MAX running time: " + \
+            str(datetime.timedelta(seconds = linear_run_time)))
+
+    # Running conv_samples mcmc chains
+    if (parallel):
+        print("Parallelized!")
+        print("Approx. MIN running time: " + \
+           str(datetime.timedelta(seconds = linear_run_time / mp.cpu_count())))
+        pool = mp.Pool(mp.cpu_count())
+        for j in range(1, conv_samples):
+            pool.apply_async(malaChain,
+                    args=(start_x, h, U, gradU, 
+                        n_samples, skip_rate, L, False, j),
+                    callback=add_expect)
+        pool.close()
+        pool.join()
+    else:
+        print("WARNING: NOT PARALLELIZED")
+        for i in range(1, conv_samples):
+            print("***CONV*** Expectation sample # ", i)
+            add_expect(malaChain(start_x, h, U, gradU, n_samples, 
+                                    skip_rate, L, False, None))
+    print("Actual running time: ", 
+            str(datetime.timedelta(seconds=int(time.time() - start_time))))
+
+    average_accept = sum(accp_rates) / len(accp_rates)
+    print ("Average acceptance rate: ", average_accept, "%")
+    # Return the list of all the expectations, and the avergace accp rate
+    return expectations, average_accept
+
+
+########################################################
+######### PART 4 : empirical data analysis #############
+########################################################
 
 # Given a list of 1-dimensional samples, return the confidence interval
 def mean_variance1d(samples1d):
