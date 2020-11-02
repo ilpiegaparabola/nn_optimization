@@ -6,12 +6,12 @@ import random
 import sys
 
 k_enlarge = 100
-h_metropolis = 0.2
+h_metropolis = 0.05
 h = h_metropolis
-num_samples = 10000
-skip_n_samples = 5
-conv_samples = 1000
-L_domain = 10
+num_samples = 100000
+skip_n_samples = 10
+conv_samples = 500
+L_domain = 20
 parallel = True
 
 # Potential for the neural network training
@@ -41,12 +41,13 @@ SAMPLING_SINGLE_CHAIN = True
 SAMPLING_TO_CHECK_CONVERGENCE = True
 
 METROPOLIS_RW = False
-ULA = True
-MALA = False
+ULA = False #True
+MALA = True #False
 
 if SAMPLING_SINGLE_CHAIN:
     print("Constructing a single full chain")
     if METROPOLIS_RW:
+        print("...Metropolis RW")
 #        X, runtime, _, _ = \
 #            mcmc.chain_rwMetropolis(np.random.random_sample(23),
 #                h, auxiliary_tot_cost, num_samples, skip_n_samples, L_domain)
@@ -55,11 +56,13 @@ if SAMPLING_SINGLE_CHAIN:
         info_str = "INFOSIMU: chain_rwMetropolis, h = " + str(h) + \
             " runtime: " + runtime + " n_samples = " + str(num_samples) + '\n'
     elif ULA:
+        print("...ULA")
         X, runtime, _ = mcmc.ulaChain(np.random.random_sample(23),
                             h, U, gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: ULA, h = " + str(h) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
     elif MALA:
+        print("...MALA")
         X, runtime, _, _ = mcmc.malaChain(np.random.random_sample(23), h, U, 
                                 gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: MALA, h = " + str(h) + \

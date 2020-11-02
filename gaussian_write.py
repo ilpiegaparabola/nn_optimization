@@ -23,22 +23,25 @@ SAMPLING_SINGLE_CHAIN = True
 SAMPLING_TO_CHECK_CONVERGENCE = True
 
 METROPOLIS_RW = False
-ULA = True
-MALA = True
+ULA = False#True
+MALA = True #False
 
 if SAMPLING_SINGLE_CHAIN:
     print("Sampling a single chain")
     if METROPOLIS_RW:
+        print("...Metropolis RW")
         X, runtime, _, _ = mcmc.chain_rwMetropolis(np.random.random_sample(1),
                      h_metropolis, U, num_samples, skip_n_samples)
         info_str = "INFOSIMU: chain_rwMetropolis, h = " + str(h_metropolis) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
     elif ULA:
+        print("...ULA")
         X, runtime, _ = mcmc.ulaChain(np.random.random_sample(1),
                 h, U, gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: ULA, h = " + str(h) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
     elif MALA:
+        print("...MALA")
         X, runtime, _, _ = mcmc.malaChain(np.random.random_sample(1), h,
                                 U, gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: MALA, h = " + str(h) + \

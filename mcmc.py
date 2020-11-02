@@ -3,6 +3,7 @@ from numpy.random import default_rng
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from numpy import log, exp, sqrt
+from numpy.linalg import norm
 import time, datetime
 import multiprocessing as mp
 
@@ -52,8 +53,12 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
     attempts = 1
     while(not checkDomain(y, L)):
             y = x + sqrt(h) * \
-        local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
+                local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
             attempts += 1
+            if (attempts % 1000 == 0):
+                print("more than", attempts, "to stay in domain")
+                input("Failed?")
+
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
     log_alpha = min(potential(x) - potential(y), 0)
@@ -64,52 +69,60 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
 
 
 # Single step x_n -> x_n+1 for the Unadjusted Langevin Algorithm
-def ulaStep(x, h, U, gradU, L, verbose = True, local_sampler = None):
+def ulaStep(x, h, U, gradU, L, verbose = True, loc_sampler = None):
     # If None, the local_sampler corresponds to the global numpy sampler,
     # otherwise is one given from the complete chain, so that each chain
     # had a local random number generator, allowing parallelization
     d = len(x)
-    mean = np.zeros(d)
+    m = np.zeros(d)
     cov = np.identity(d)
-    if (local_sampler == None):
-        local_sampler = np.random
-    y = x - h * gradU(x) + np.sqrt(2. * h) * \
-                 local_sampler.multivariate_normal(mean, cov)
+    if (loc_sampler == None):
+        loc_sampler = np.random
+    y = x - h*gradU(x) + np.sqrt(2.*h) * loc_sampler.multivariate_normal(m, cov)
     # Check that the proposed point falls into the domain
     attempts = 1
     while(not checkDomain(y, L)):
-            y = x - h * gradU(x) + np.sqrt(2. * h) * \
-                local_sampler.multivariate_normal(meann, cov)
+            y = x - h*gradU(x) + np.sqrt(2.*h) * \
+                                        loc_sampler.multivariate_normal(m, cov)
             attempts += 1
+            if (attempts % 1000 == 0):
+                print("More than", attempts, "to stay in domain")
+                input("Failed?")
+
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
     return y
 
 
-def malaStep(x, h, U, gradU, L, verbose = True, local_sampler = None):
+def malaStep(x, h, U, gradU, L, verbose = True, loc_sampler = None):
     # If None, the local_sampler corresponds to the global numpy sampler,
     # otherwise is one given from the complete chain, so that each chain
     # had a local random number generator, allowing parallelization
     d = len(x)
-    mean = np.zeros(d)
+    m = np.zeros(d)
     cov = np.identity(d)
-    if (local_sampler == None):
-        local_sampler = np.random
-    y = x - h * gradU(x) + np.sqrt(2. * h) * \
-                 local_sampler.multivariate_normal(mean, cov)
+    if (loc_sampler == None):
+        loc_sampler = np.random
+    y = x - h*gradU(x) + np.sqrt(2.*h) * loc_sampler.multivariate_normal(m, cov)
     # Check that the proposed point falls into the domain
     attempts = 1
     while(not checkDomain(y, L)):
-            y = x - h * gradU(x) + np.sqrt(2. * h) * \
-                local_sampler.multivariate_normal(meann, cov)
+            y = x - h*gradU(x) + np.sqrt(2.*h) * \
+                                        loc_sampler.multivariate_normal(m, cov)
             attempts += 1
+            if (attempts % 1000 == 0):
+                print("More than", attempts, "to stay in domain")
+                input("Failed?")
+       
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
     # Now correct with a Matropolis step
-    Gxy = U(y) - U(x) - (y-x) * (gradU(x) + gradU(y)) / 2. + \
-            (h/4.) * (np.fabs(gradU(y))**2. - np.fabs(gradU(x))**2)
-    log_alpha = max( -Gxy, 0)
-    if log(local_sampler.uniform()) < log_alpha:
+    Gxy = U(y) - U(x) - np.dot(y-x, gradU(x) + gradU(y)) / 2. + \
+            (h/4.) * (norm(gradU(y))**2. - norm(gradU(x))**2)
+    #print("Gxy :", Gxy)
+    #input("..")
+    log_alpha = max( - Gxy, 0)
+    if log(loc_sampler.uniform()) < log_alpha:
         return y, 1
     else:
         return x, 0

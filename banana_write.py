@@ -13,33 +13,37 @@ def ban_gradU(x):
     return np.array([-2*(1-x[0]) - 40*(x[1] - x[0]**2)*x[0],
                             20. * (x[1] - x[0]**2)])
 
-h_metropolis = 0.1
+h_metropolis = 0.01
 h = h_metropolis
 num_samples = 10000
 skip_n_samples = 5
 conv_samples = 1000
-L_domain = 10
+L_domain = 1000
 parallel = True
 
 SAMPLING_SINGLE_CHAIN = True
 SAMPLING_TO_CHECK_CONVERGENCE = True
 
-METROPOLIS_RW = False
-ULA = True
-MALA = False
+METROPOLIS_RW = False #True
+ULA = False
+MALA = True
 
 if SAMPLING_SINGLE_CHAIN:
+    print("Sampling from a single chain")
     if METROPOLIS_RW:
+        print("Metropolis RW") 
         X, runtime, _, _ = mcmc.chain_rwMetropolis(np.array([4, 1]), h,
             ban_U, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: chain_rwMetropolis, h = " + str(h) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
     elif ULA:
+        print("ULA")
         X, runtime, _ = mcmc.ulaChain(np.array([4, 1]), h, ban_U, ban_gradU,
                 num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: ULA, h = " + str(h) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
     elif MALA:
+        print("MALA")
         X, runtime, _, _ = mcmc.malaChain(np.array([4, 1]), h,
             ban_U, ban_gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: MALA, h = " + str(h) + \
@@ -77,7 +81,7 @@ if SAMPLING_TO_CHECK_CONVERGENCE:
         X = mcmc.ulaConvergence(np.array([4, 1]), h,
                 ban_U, ban_gradU, num_samples, skip_n_samples, L_domain,
                 conv_samples, parallel)
-         info_str = "CONVERGENCE OF: ULA, h = " + str(h)+\
+        info_str = "CONVERGENCE OF: ULA, h = " + str(h)+\
             " n_samples = " + str(num_samples) + "%" + " skip rate: " + \
             str(skip_n_samples) + \
             " #chains for studying convergence: " + \
