@@ -17,8 +17,9 @@ h_metropolis = 0.01
 h = h_metropolis
 num_samples = 10000
 skip_n_samples = 5
-conv_samples = 1000
-L_domain = 1000
+conv_samples = 500
+L_domain = 7
+L = L_domain
 parallel = True
 
 SAMPLING_SINGLE_CHAIN = True
@@ -26,7 +27,11 @@ SAMPLING_TO_CHECK_CONVERGENCE = True
 
 METROPOLIS_RW = False #True
 ULA = False
-MALA = True
+MALA = False #True
+MULTICHAIN_RW = True
+# 10 chains to produce in parallel
+multich = 20
+dim = 2
 
 if SAMPLING_SINGLE_CHAIN:
     print("Sampling from a single chain")
@@ -48,6 +53,12 @@ if SAMPLING_SINGLE_CHAIN:
             ban_U, ban_gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: MALA, h = " + str(h) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
+    elif MULTICHAIN_RW:
+        print("...multichain RW approach")
+        X, arate, _  = \
+            mcmc.multichainRW(dim, L, h, ban_U, num_samples, multich,
+                    skip_n_samples, True)
+        info_str = "INFOSIMU: Multichain RW"
 
     filename = "banana_chain.smp"
     if (len(sys.argv) == 2):
@@ -95,6 +106,11 @@ if SAMPLING_TO_CHECK_CONVERGENCE:
             str(a_rate) + "%" + " skip rate: " + str(skip_n_samples) + \
             " #chains for studying convergence: " + \
             str(conv_samples) + "\n"
+    elif MULTICHAIN_RW:
+        print("...multichain RW")
+        X = mcmc.multichainRWconvergence(dim, L, h, ban_U,num_samples, multich,
+               skip_n_samples, conv_samples)
+        info_str = "CONVERGENCE of: Multichain RW"
 
    
     # Store the samples into a separate file, to incentivate a chain approach

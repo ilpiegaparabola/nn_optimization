@@ -326,7 +326,7 @@ def chain_rwMetropolis(start_x, h, potential, n_samples,
         skip_rate=5, L=10, verbose = True, seed = None):
     chain_sampler = np.random.RandomState(seed)
     # Burning-time rate. 5 = 20%
-    bt_rate = 5
+    bt_rate = 7
     # n_samples is the length of the chain with no burning time
     # We compute total_samples, the total lentgh included the burning time
     total_samples = bt_rate * n_samples / (bt_rate - 1)
@@ -390,7 +390,8 @@ def chain_rwMetropolis(start_x, h, potential, n_samples,
         print("Actual duration = " + runtime)
     x_samples = np.asanyarray(x_samples) 
     expect = sum([x for x in x_samples]) / len(x_samples)
-    print("Chain expectation: ", expect)
+    if verbose:
+        print("Chain expectation: ", expect)
     ### TEMPORARELY HERE, for the Neural Network case
 #    print("EXPECTATION: ")
 ##    b2 = expect[0:2]
@@ -407,9 +408,78 @@ def chain_rwMetropolis(start_x, h, potential, n_samples,
 #    print("W4 = ", W4)
     return x_samples, runtime, accept_rate, expect
 
+
+# Let's try with a multi-chain approach as described in my notes. vbs = verbose
+def multichainRW(dimx, L, h, pot, n_samples, n_chains, thinning, vbs = False):
+    if vbs:
+        print("---- Multichain approach: RW Metropolis ----")
+    chains = []
+    arates = []
+    def add_chain(metropolisRW_result):
+        chains.append(metropolisRW_result[0])
+        arates.append(metropolisRW_result[2])
+    
+    # Prepare #n_chains random starting points
+    st_points = []
+    for i in range(n_chains):
+        st_points.append(np.random.uniform(-L, L, dimx))
+
+    # Run a single chain just to give a time estimation
+    start_time = time.time()
+    add_chain(chain_rwMetropolis(st_points[0], h, pot, n_samples, 
+                                                    thinning, L, False, None))
+    if vbs:
+        linear_run_time = int((time.time() - start_time) * n_chains)
+        print("Approximated MAX running time: " + \
+                            str(datetime.timedelta(seconds = linear_run_time)))
+        print("Approx. MIN running time: " + \
+           str(datetime.timedelta(seconds = linear_run_time / mp.cpu_count())))
+
+    # Run multiple chains in parallel, each stored in chains[]
+    pool = mp.Pool(mp.cpu_count())
+    for j in range(1, n_chains):
+        pool.apply_async(chain_rwMetropolis,
+                     args = (st_points[j],h,pot,n_samples,thinning,L,False,j),
+                                                          callback = add_chain)
+    pool.close()
+    pool.join()
+
+    # Now construct and a return a single chain of n_samples from the parall.
+    X = []
+    for i in range(n_samples):
+        # Add to X a random sample from a random chain, counting from the end
+        # (in order to avoid the burning time samples)
+        nth = np.random.random_integers(1, n_samples - 1)
+        X.append(chains[np.random.random_integers(0, n_chains -1)][-nth])
+    mean_acceptance = sum(arates) / len(arates)
+    print("Averge rate: ", mean_acceptance)
+    expect = sum([x for x in X]) / n_samples
+    print("Multichain expectation: ", expect)
+    return X, mean_acceptance, expect
+
+
 ################################################################
 #################### PART 3: CONVERGENCE #################
 #########################################################
+
+# Convergence for the random walk multichain metropolis
+def multichainRWconvergence(dimx, L, h, pot, n_samples, n_chains, thinning, 
+        n_conv):
+    print("--- CONVERGENCE of multichain RW method ---")
+    # Just run n_conv instances of multichainRW and take their expectations
+    expectations = np.ones(n_conv)
+    # Run a single chain just to give a time estimation
+    start_time = time.time()
+    expectations[0] = multichainRW(dimx, L, h, pot, 
+                                            n_samples, n_chains, thinning)[2]
+    linear_run_time = int((time.time() - start_time) * n_conv)
+    print("Approximated running time: " + \
+            str(datetime.timedelta(seconds = linear_run_time)))
+    for i in range(1, n_conv):
+        expectations[i] = multichainRW(dimx, L, h, pot, 
+                                            n_samples, n_chains, thinning)[2]
+    return expectations
+
 
 def convergenceMetropolis(start_x, h, pot, n_samples, 
         skip_rate, L, conv_samples, parallel = True):

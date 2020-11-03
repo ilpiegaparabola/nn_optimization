@@ -17,6 +17,7 @@ num_samples = 10000
 skip_n_samples = 5
 conv_samples = 500
 L_domain = 10
+L = L_domain
 parallel = True
 
 SAMPLING_SINGLE_CHAIN = True
@@ -24,7 +25,10 @@ SAMPLING_TO_CHECK_CONVERGENCE = True
 
 METROPOLIS_RW = False
 ULA = False#True
-MALA = True #False
+MALA = False
+MULTICHAIN_RW = True
+# 10 chains to produce in parallel
+multich = 10
 
 if SAMPLING_SINGLE_CHAIN:
     print("Sampling a single chain")
@@ -46,6 +50,12 @@ if SAMPLING_SINGLE_CHAIN:
                                 U, gradU, num_samples, skip_n_samples, L_domain)
         info_str = "INFOSIMU: MALA, h = " + str(h) + \
                 " runtime: " + runtime + " n_samples = " + str(num_samples)+'\n'
+    elif MULTICHAIN_RW:
+        print("...multichain RW approach")
+        X, arate, _  = \
+            mcmc.multichainRW(1, L, h, U, num_samples, multich, 
+                    skip_n_samples, True)
+        info_str = "INFOSIMU: Multichain RW"
    
     # Store the samples into a separate file, to incentivate a C approach
     filename = "gaussian_chain.smp"
@@ -88,7 +98,10 @@ if SAMPLING_TO_CHECK_CONVERGENCE:
             str(a_rate) + "%" + " skip rate: " + str(skip_n_samples) + \
             " #chains for studying convergence: " + \
             str(conv_samples) + "\n"
-
+    elif MULTICHAIN_RW:
+        X = mcmc.multichainRWconvergence(1, L, h, U, num_samples, multich, 
+                skip_n_samples, conv_samples)
+        info_str = "CONVERGENCE of: Multichain RW"
 
     # Store the samples into a separate file, modular approach
     filename = "gaussian_convergence.smp"

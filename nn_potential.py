@@ -215,8 +215,9 @@ if __name__ == "__main__":
     # Parameters for the NN
     params_together = np.random.random_sample(23) * 0.5 
     b2, b3, b4, W2, W3, W4 = split_params(params_together)
-    #print("BEFORE optimization")
-    #nn_contour_plot(x, y, b2, b3, b4, W2, W3, W4)
+    print("BEFORE optimization")
+    nn_contour_plot(x, y, b2, b3, b4, W2, W3, W4)
+    plt.show()
     #print("#point VS original class VS NN class")
     #for i in range(N):
     #    print(i, y[i][0], NN_to_scalar(NN(x[i], b2, b3, b4, W2, W3, W4)))
@@ -229,38 +230,15 @@ if __name__ == "__main__":
     #            print("NN(", i, ",", j, "=", tmp)
     
     
-    #foo, b2, b3, b4, W2, W3, W4 = performGradientDescent(x, y, b2, b3, b4, W2, W3, W4)
-    #print("AFTER gradient descent")
-    #nn_contour_plot(x, y, b2, b3, b4, W2, W3, W4)
+    _,b2,b3,b4,W2,W3,W4 = performGradientDescent(x, y, b2, b3, b4, W2, W3, W4,
+            1000000, 0.05)
+    print("AFTER gradient descent")
+    nn_contour_plot(x, y, b2, b3, b4, W2, W3, W4)
+    plt.show()
     
     #print("#point VS original class VS NN class")
     #for i in range(N):
     #    print(i, y[i][0], NN_to_scalar(NN(x[i], b2, b3, b4, W2, W3, W4)))
     
 
-### # OOOk, from now on use the HMC optimizer!
-    import hmc
     
-    def auxiliary_tot_cost(params_together):
-        # here x, y are understood as global variables defined above
-        b2, b3, b4, W2, W3, W4 = split_params(params_together)
-        return total_cost (x, y, b2, b3, b4, W2, W3, W4, 10)
-    
-    def auxiliary_gradient(params_together):
-        b2, b3, b4, W2, W3, W4 = split_params(params_together)
-        return grad_cost (x, y, b2, b3, b4, W2, W3, W4)
-
-    centers, chain = hmc.mode_research(params_together, 1, 0.01, 0.5,  
-                        auxiliary_gradient, 1000, 50, auxiliary_tot_cost)
-    d = len(chain[0])
-    for i in range(d):
-        plt.subplot(5, 5, i+1)
-        # 50 is the number of bins
-        plt.hist(chain[:,i], 50, density=True)
-    plt.show()
-
-    for i in range(centers.shape[0]):
-        print("Gradien descent on candidate-mode number ", i)
-        b2, b3, b4, W2, W3, W4 = split_params(centers[i])
-        performGradientDescent(x, y, b2, b3, b4, W2, W3, W4, eta=0.5)
-
