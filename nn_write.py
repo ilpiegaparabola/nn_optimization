@@ -4,13 +4,14 @@ import mcmc
 import nn_potential
 import random
 import sys
+import multiprocessing as mp
 
 k_enlarge = 100
 h_metropolis = 0.1
 h = h_metropolis
-num_samples = 10000
+num_samples = 100
 skip_n_samples = 5
-conv_samples = 500
+conv_samples = 5
 L_domain = 20
 parallel = True
 
@@ -45,7 +46,8 @@ ULA = False #True
 MALA = False
 MULTICHAIN_RW = True
 # 10 chains to produce in parallel
-multich = 10
+multich = mp.cpu_count()
+#multich = 10
 dim = 23
 
 if SAMPLING_SINGLE_CHAIN:

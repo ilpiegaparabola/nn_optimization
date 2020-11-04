@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mcmc
 import sys
+import multiprocessing as mp
 
 # Potential for a 1dim Gaussian
 def U(x):
@@ -13,9 +14,9 @@ def gradU(x):
 
 h_metropolis = 0.2
 h = h_metropolis
-num_samples = 10000
+num_samples = 100
 skip_n_samples = 5
-conv_samples = 500
+conv_samples = 5
 L_domain = 10
 L = L_domain
 parallel = True
@@ -28,7 +29,8 @@ ULA = False#True
 MALA = False
 MULTICHAIN_RW = True
 # 10 chains to produce in parallel
-multich = 10
+#multich = 10
+multich = mp.cpu_count()
 
 if SAMPLING_SINGLE_CHAIN:
     print("Sampling a single chain")
@@ -101,7 +103,7 @@ if SAMPLING_TO_CHECK_CONVERGENCE:
     elif MULTICHAIN_RW:
         X = mcmc.multichainRWconvergence(1, L, h, U, num_samples, multich, 
                 skip_n_samples, conv_samples)
-        info_str = "CONVERGENCE of: Multichain RW"
+        info_str = "CONVERGENCE of: Multichain RW\n"
 
     # Store the samples into a separate file, modular approach
     filename = "gaussian_convergence.smp"
@@ -110,7 +112,7 @@ if SAMPLING_TO_CHECK_CONVERGENCE:
     samples_file = open(filename, "w")
     samples_file.write(info_str)
     for x in X:
-        for i in x:
-            print(i, file = samples_file)
+  #      for i in x:
+            print(x, file = samples_file)
     samples_file.close()
     print("Samples and information stored in " + filename)

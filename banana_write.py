@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mcmc
 import sys
+import multiprocessing as mp
  
 
 # Potential for the banana distribution
@@ -15,9 +16,9 @@ def ban_gradU(x):
 
 h_metropolis = 0.01
 h = h_metropolis
-num_samples = 10000
+num_samples = 100
 skip_n_samples = 5
-conv_samples = 500
+conv_samples = 5
 L_domain = 7
 L = L_domain
 parallel = True
@@ -30,7 +31,8 @@ ULA = False
 MALA = False #True
 MULTICHAIN_RW = True
 # 10 chains to produce in parallel
-multich = 20
+#multich = 20
+multich = mp.cpu_count()
 dim = 2
 
 if SAMPLING_SINGLE_CHAIN:
@@ -110,7 +112,7 @@ if SAMPLING_TO_CHECK_CONVERGENCE:
         print("...multichain RW")
         X = mcmc.multichainRWconvergence(dim, L, h, ban_U,num_samples, multich,
                skip_n_samples, conv_samples)
-        info_str = "CONVERGENCE of: Multichain RW"
+        info_str = "CONVERGENCE of: Multichain RW\n"
 
    
     # Store the samples into a separate file, to incentivate a chain approach

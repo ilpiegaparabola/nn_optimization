@@ -467,17 +467,17 @@ def multichainRWconvergence(dimx, L, h, pot, n_samples, n_chains, thinning,
         n_conv):
     print("--- CONVERGENCE of multichain RW method ---")
     # Just run n_conv instances of multichainRW and take their expectations
-    expectations = np.ones(n_conv)
+    expectations = []
     # Run a single chain just to give a time estimation
     start_time = time.time()
-    expectations[0] = multichainRW(dimx, L, h, pot, 
-                                            n_samples, n_chains, thinning)[2]
+    expectations.append(multichainRW(dimx, L, h, pot, 
+                                            n_samples, n_chains, thinning)[2])
     linear_run_time = int((time.time() - start_time) * n_conv)
     print("Approximated running time: " + \
             str(datetime.timedelta(seconds = linear_run_time)))
     for i in range(1, n_conv):
-        expectations[i] = multichainRW(dimx, L, h, pot, 
-                                            n_samples, n_chains, thinning)[2]
+        expectations.append(multichainRW(dimx, L, h, pot, 
+                                            n_samples, n_chains, thinning)[2])
     return expectations
 
 
