@@ -476,6 +476,7 @@ def multichainRWconvergence(dimx, L, h, pot, n_samples, n_chains, thinning,
     print("Approximated running time: " + \
             str(datetime.timedelta(seconds = linear_run_time)))
     for i in range(1, n_conv):
+        print("Chain ", i+1, " of ", n_conv)
         expectations.append(multichainRW(dimx, L, h, pot, 
                                             n_samples, n_chains, thinning)[2])
     return expectations

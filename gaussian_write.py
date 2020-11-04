@@ -12,11 +12,11 @@ def U(x):
 def gradU(x):
     return x
 
-h_metropolis = 0.2
+h_metropolis = 1
 h = h_metropolis
-num_samples = 100
+num_samples = 10000
 skip_n_samples = 5
-conv_samples = 5
+conv_samples = 500
 L_domain = 10
 L = L_domain
 parallel = True

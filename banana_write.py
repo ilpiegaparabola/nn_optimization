@@ -14,11 +14,11 @@ def ban_gradU(x):
     return np.array([-2*(1-x[0]) - 40*(x[1] - x[0]**2)*x[0],
                             20. * (x[1] - x[0]**2)])
 
-h_metropolis = 0.01
+h_metropolis = 0.1
 h = h_metropolis
-num_samples = 100
+num_samples = 10000
 skip_n_samples = 5
-conv_samples = 5
+conv_samples = 500
 L_domain = 7
 L = L_domain
 parallel = True
