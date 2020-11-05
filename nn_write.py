@@ -7,11 +7,11 @@ import sys
 import multiprocessing as mp
 
 k_enlarge = 100
-h_metropolis = 0.1
+h_metropolis = 0.3
 h = h_metropolis
-num_samples = 100
+num_samples = 10000
 skip_n_samples = 5
-conv_samples = 5
+conv_samples = 500
 L_domain = 20
 parallel = True
 

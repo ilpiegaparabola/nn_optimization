@@ -57,7 +57,7 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
             attempts += 1
             if (attempts % 1000 == 0):
                 print("more than", attempts, "to stay in domain")
-                input("Failed?")
+#                input("Failed?")
 
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
@@ -466,6 +466,7 @@ def multichainRW(dimx, L, h, pot, n_samples, n_chains, thinning, vbs = False):
 def multichainRWconvergence(dimx, L, h, pot, n_samples, n_chains, thinning, 
         n_conv):
     print("--- CONVERGENCE of multichain RW method ---")
+    print("(each chain the combination of", n_chains, "chains)")
     # Just run n_conv instances of multichainRW and take their expectations
     expectations = []
     # Run a single chain just to give a time estimation
@@ -476,7 +477,7 @@ def multichainRWconvergence(dimx, L, h, pot, n_samples, n_chains, thinning,
     print("Approximated running time: " + \
             str(datetime.timedelta(seconds = linear_run_time)))
     for i in range(1, n_conv):
-        print("Chain ", i+1, " of ", n_conv)
+        print("Chain ", i+1, "of", n_conv)
         expectations.append(multichainRW(dimx, L, h, pot, 
                                             n_samples, n_chains, thinning)[2])
     return expectations
