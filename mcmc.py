@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from numpy.random import default_rng
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
@@ -45,10 +46,17 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
     # otherwise is one given from the complete chain, so that each chain
     # had a local random number generator, allowing parallelization
     d = len(x)
+    print("parameter dimension: ", len(x))
+    print("Starting potential: ", potential(x)[0])
+    x1_complete = potential(x)[1]
     if (local_sampler == None):
         local_sampler = np.random
     y = x + sqrt(h) * \
         local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
+    print("Proposed potential", potential(y)[0])
+    x2_complete = potential(y)[1]
+    print("Norm between the old and the proposed point: ")
+    print(np.linalg.norm(x1_complete - x2_complete))
     # Check that the proposed point falls into the domain
     attempts = 1
     while(not checkDomain(y, L)):
@@ -61,11 +69,81 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
 
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
+    log_alpha = min(potential(x)[0] - potential(y)[0], 0)
+    if log(local_sampler.uniform()) < log_alpha:
+        return y, 1
+    else:
+        return x, 0
+
+# TO RENAME
+# Single step x_n -> x_n+1 for the Random Walk Metropolis
+
+
+
+
+def rwBatchStep(x, h, potential, L, batch_size,
+                                        verbose = True, local_sampler = None):
+    
+    batch = random.sample(range(len(x)), batch_size)
+    # Update with the local sampler
+    # Three auxhiliary functions for this batch case
+    def from_complete_to_partial(x_complete, list_of_indeces):
+        # build x_partial as a batch_size dimensional array
+        # choosing the incedes on x_complete that are in batch_indeces
+        length = len(list_of_indeces)
+        partial_x = np.zeros(length)
+        for i in range(length):
+            partial_x[i] = x_complete[list_of_indeces[i]]
+   #     if(verbose):
+   #         print("Partial parameter: ", partial_x)
+        return partial_x
+
+    def from_partial_to_complete(x_partial, x_complete, list_of_indeces):
+        # replace the inceces in x_complete, corresponding to batch_inceces
+        # to the respective values in x_partial
+        # temporary copy to avoid overwrite the argument
+        x_copy = np.copy(x_complete)
+        for i in range(len(list_of_indeces)):
+            x_copy[list_of_indeces[i]] = x_partial[i]
+        return x_copy
+
+    x_small = from_complete_to_partial(x, batch)
+    # If None, the local_sampler corresponds to the global numpy sampler,
+    # otherwise is one given from the complete chain, so that each chain
+    # had a local random number generator, allowing parallelization
+    d = len(x_small)
+    if(verbose):
+   #     print("parameter dimension: ", len(x_small))
+        print("Starting potential: ", potential(x))
+    if (local_sampler == None):
+        local_sampler = np.random
+    y_small = x_small + sqrt(h) * \
+        local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
+
+    # Check that the proposed point falls into the domain
+    attempts = 1
+    while(not checkDomain(y_small, L)):
+            y_small = x_small + sqrt(h) * \
+                local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
+            attempts += 1
+            if (attempts % 1000 == 0):
+                print("more than", attempts, "to stay in domain")
+#                input("Failed?")
+
+    if (verbose and (attempts > 20)):
+        print("Warning: more than 20 attempts to stay in domain")
+
+    if(verbose):
+        print("Norm between the old and the proposed point: ")
+        print(np.linalg.norm(x_small - y_small))
+    y = from_partial_to_complete(y_small, x, batch)
+    print("Proposed potential", potential(y))
     log_alpha = min(potential(x) - potential(y), 0)
     if log(local_sampler.uniform()) < log_alpha:
         return y, 1
     else:
         return x, 0
+
 
 
 # Single step x_n -> x_n+1 for the Unadjusted Langevin Algorithm
@@ -319,6 +397,79 @@ def chain_uHMC(start_x, T, h, gamma, gradient, n_samples):
 # every single file refering to it. But I will do.
 def sample_uHMC(start_x, T, h, gamma, gradient, n_samples):
     return chain_uHMC(start_x, T, h, gamma, gradient, n_samples)
+
+# Complete Random Walk Metropolis chain
+def chain_rwBatchMetropolis(start_x, h, potential, n_samples, batch_size,
+        skip_rate=5, L=10, verbose = True, seed = None):
+    chain_sampler = np.random.RandomState(seed)
+    # Burning-time rate. 5 = 20%
+    bt_rate = 7
+    # n_samples is the length of the chain with no burning time
+    # We compute total_samples, the total lentgh included the burning time
+    total_samples = bt_rate * n_samples / (bt_rate - 1)
+    # use the bt_rate to obtain the number of discarded samples
+    bt = int (total_samples / bt_rate)
+
+    # Run a single chain step and compute the expected running time
+    start_time = time.time()
+    accept_rate, is_accepted = 0, 0
+    xnew, is_accepted  = rwBatchStep(start_x, h, potential, L, batch_size, 
+                                        verbose, chain_sampler)
+    time_one_sample = time.time() - start_time
+
+    time_burning = time_one_sample * (bt - 1) 
+    time_total = time_burning + n_samples * time_one_sample * skip_rate
+    if (verbose):
+        print("Approximated total running time: ", 
+            str(datetime.timedelta(seconds = int(time_total))))
+        print("Approximated burning time...", 
+            str(datetime.timedelta(seconds = int(time_burning))))
+#    input("Press ENTER to proceed.")
+        print("Burning time started...")
+    for i in range(bt - 1):
+        xnew, is_accepted  = rwBatchStep(xnew, h, potential, L, batch_size,
+                                                verbose, chain_sampler)
+
+    # Produce the first valid sample, and start counting acceptance rate
+    if (verbose):
+        print("Markov chain started!")
+    x_samples = []
+    xnew, is_accepted = rwBatchStep(xnew, h, potential, L, batch_size,
+                                                verbose, chain_sampler)
+    accept_rate += is_accepted
+    x_samples.append(xnew)
+
+    # Append all the remaining valid samples, one every skip_rate samples
+    for i in range(1, n_samples):
+        for l in range(skip_rate):
+#        xnew, is_accepted = rwMetropolis(x_samples[i-1], h, potential)
+            xnew, is_accepted = rwBatchStep(xnew,h,potential, L, batch_size,
+                                                verbose, chain_sampler)
+            accept_rate += is_accepted
+        x_samples.append(xnew)
+#        void = input("DEBUG: press enter for the next sample")
+        if (verbose and (i % 2000 == 0)):
+            print("Sample #", i)
+#            print(x_samples[i])
+
+    accept_rate = int(accept_rate * 100. / (n_samples * skip_rate))
+    if (verbose):
+        print("--- end of the chain ---\nBurning samples: ", bt)
+        print("Skip rate: ", skip_rate, "\nEffective samples: ", n_samples)
+        print("Total samples: ", bt+n_samples*skip_rate,
+                " = burning_samples + ", "skip_rate * Effective samples")
+
+    runtime = str(datetime.timedelta(seconds = int(time.time()-start_time)))+ \
+       " accept_rate: " + str(accept_rate) + "%, skip_rate = " + str(skip_rate)\
+       + "Domain: " + str(L)
+
+    if (verbose):
+        print("Actual duration = " + runtime)
+    x_samples = np.asanyarray(x_samples) 
+    expect = sum([x for x in x_samples]) / len(x_samples)
+    if verbose:
+        print("Chain expectation: ", expect)
+    return x_samples, runtime, accept_rate, expect
 
 
 # Complete Random Walk Metropolis chain
