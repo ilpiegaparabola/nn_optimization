@@ -45,6 +45,7 @@ multich = mp.cpu_count()
 #multich = 10
 dim = 231926
 
+
 if SAMPLING_SINGLE_CHAIN:
     print("Constructing a single full chain")
     if METROPOLIS_RW:
@@ -52,8 +53,11 @@ if SAMPLING_SINGLE_CHAIN:
 #        X, runtime, _, _ = \
 #            mcmc.chain_rwMetropolis(np.random.random_sample(23),
 #                h, auxiliary_tot_cost, num_samples, skip_n_samples, L_domain)
-        X, runtime, _, _ = mcmc.chain_rwBatchMetropolis(np.random.random_sample(dim),
-                                h, U, num_samples, batch_size, skip_n_samples, L_domain)
+        store_chain = True #False # Just want to compute expectation
+        X, runtime, _, _ = mcmc.chain_rwBatchMetropolis(
+                             np.random.random_sample(dim),
+                             h, U, num_samples, batch_size, 
+                             store_chain, skip_n_samples, L_domain)
         info_str = "INFOSIMU: chain_rwMetropolis, h = " + str(h) + \
             " runtime: " + runtime + " n_samples = " + str(num_samples) + '\n'
     elif ULA:

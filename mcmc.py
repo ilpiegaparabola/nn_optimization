@@ -46,17 +46,11 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
     # otherwise is one given from the complete chain, so that each chain
     # had a local random number generator, allowing parallelization
     d = len(x)
-    print("parameter dimension: ", len(x))
-    print("Starting potential: ", potential(x)[0])
-    x1_complete = potential(x)[1]
+    print("Starting potential: ", potential(x))
     if (local_sampler == None):
         local_sampler = np.random
     y = x + sqrt(h) * \
         local_sampler.multivariate_normal(np.zeros(d), np.identity(d))
-    print("Proposed potential", potential(y)[0])
-    x2_complete = potential(y)[1]
-    print("Norm between the old and the proposed point: ")
-    print(np.linalg.norm(x1_complete - x2_complete))
     # Check that the proposed point falls into the domain
     attempts = 1
     while(not checkDomain(y, L)):
@@ -69,7 +63,11 @@ def rwMetropolis(x, h, potential, L, verbose = True, local_sampler = None):
 
     if (verbose and (attempts > 20)):
         print("Warning: more than 20 attempts to stay in domain")
-    log_alpha = min(potential(x)[0] - potential(y)[0], 0)
+    print("Proposed potential", potential(y))
+    print("Norm between the old and the proposed point: ")
+    print(np.linalg.norm(x - y))
+#    input("ok ?")
+    log_alpha = min(potential(x) - potential(y), 0)
     if log(local_sampler.uniform()) < log_alpha:
         return y, 1
     else:
@@ -400,7 +398,7 @@ def sample_uHMC(start_x, T, h, gamma, gradient, n_samples):
 
 # Complete Random Walk Metropolis chain
 def chain_rwBatchMetropolis(start_x, h, potential, n_samples, batch_size,
-        skip_rate=5, L=10, verbose = True, seed = None):
+        store_chain = True, skip_rate=5, L=10, verbose = True, seed = None):
     chain_sampler = np.random.RandomState(seed)
     # Burning-time rate. 5 = 20%
     bt_rate = 7
@@ -433,20 +431,30 @@ def chain_rwBatchMetropolis(start_x, h, potential, n_samples, batch_size,
     # Produce the first valid sample, and start counting acceptance rate
     if (verbose):
         print("Markov chain started!")
-    x_samples = []
+    if (store_chain):
+        x_samples = []
+    else:
+        x_samples = np.zeros(len(start_x))
+
     xnew, is_accepted = rwBatchStep(xnew, h, potential, L, batch_size,
                                                 verbose, chain_sampler)
     accept_rate += is_accepted
-    x_samples.append(xnew)
+    if (store_chain):
+        x_samples.append(xnew)
+    else:
+        x_samples += xnew
 
-    # Append all the remaining valid samples, one every skip_rate samples
+    # Append/sum all the remaining valid samples, one every skip_rate samples
     for i in range(1, n_samples):
         for l in range(skip_rate):
 #        xnew, is_accepted = rwMetropolis(x_samples[i-1], h, potential)
             xnew, is_accepted = rwBatchStep(xnew,h,potential, L, batch_size,
                                                 verbose, chain_sampler)
             accept_rate += is_accepted
-        x_samples.append(xnew)
+        if (store_chain):
+            x_samples.append(xnew)
+        else:
+            x_samples += xnew
 #        void = input("DEBUG: press enter for the next sample")
         if (verbose and (i % 2000 == 0)):
             print("Sample #", i)
@@ -465,8 +473,12 @@ def chain_rwBatchMetropolis(start_x, h, potential, n_samples, batch_size,
 
     if (verbose):
         print("Actual duration = " + runtime)
-    x_samples = np.asanyarray(x_samples) 
-    expect = sum([x for x in x_samples]) / len(x_samples)
+    if (store_chain):
+        x_samples = np.asanyarray(x_samples) 
+        expect = sum([x for x in x_samples]) / len(x_samples)
+    else:
+        expect = x_samples / n_samples
+        x_samples = "samples not stored"
     if verbose:
         print("Chain expectation: ", expect)
     return x_samples, runtime, accept_rate, expect
@@ -498,7 +510,7 @@ def chain_rwMetropolis(start_x, h, potential, n_samples,
             str(datetime.timedelta(seconds = int(time_total))))
         print("Approximated burning time...", 
             str(datetime.timedelta(seconds = int(time_burning))))
-#    input("Press ENTER to proceed.")
+#        input("Press ENTER to proceed.")
         print("Burning time started...")
     for i in range(bt - 1):
         xnew, is_accepted  = rwMetropolis(xnew, h, potential, L, 
@@ -587,13 +599,17 @@ def multichainRW(dimx, L, h, pot, n_samples, n_chains, thinning, vbs = False):
            str(datetime.timedelta(seconds = linear_run_time / mp.cpu_count())))
 
     # Run multiple chains in parallel, each stored in chains[]
+    print("Number of chains:", n_chains)
+    input("FLAG1")
     pool = mp.Pool(mp.cpu_count())
     for j in range(1, n_chains):
         pool.apply_async(chain_rwMetropolis,
                      args = (st_points[j],h,pot,n_samples,thinning,L,False,j),
                                                           callback = add_chain)
+    input("FLAG2")
     pool.close()
     pool.join()
+    input("FLAG3")
 
     # Now construct and a return a single chain of n_samples from the parall.
     X = []
