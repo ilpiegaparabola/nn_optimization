@@ -45,10 +45,9 @@ def classification_model():
                 metrics=['accuracy'])
     return model
 
-#model = classification_model()
+model = classification_model()
 
 if __name__ == "__main__":
-    model = classification_model()
     model.fit(X, y, validation_split=0, epochs=2000, verbose=2)
     print("Ok, model fitted")
     y_hat = model.predict(X).reshape(y.shape)
@@ -70,10 +69,10 @@ def total_tensor_elements(a):
 
 # Given a generic numpy array of the right size, fit it into the
 # right format to be used as a parameter for the keras Neural Network
-def params_to_keras(p, loc_model, verbose = False):
+def params_to_keras(p, verbose = False):
     offset = 0
     # Create an array q of the right Keras format
-    q = loc_model.get_weights()
+    q = model.get_weights()
     # Loop for setting the parameters for each layer
     for i in range(len(q)):
         take_n = total_tensor_elements(q[i])
@@ -90,15 +89,7 @@ def params_to_keras(p, loc_model, verbose = False):
 # NN parameters, compute the model cost
 # function according to the keras model
 def keras_cost(p):
-
-    model = Sequential()
-    model.add(Dense(3, activation='relu', input_shape=(n_cols,)))
-    model.add(Dense(4, activation='relu'))
-    model.add(Dense(n_classes, activation='softmax'))
-    model.compile(optimizer='adam', loss='binary_crossentropy',
-                metrics=['accuracy'])
-
-    p = params_to_keras(p, model)
+    p = params_to_keras(p)
     model.set_weights(p)
     y_hat = model.predict(X).reshape(y.shape)
     return bce(y, y_hat).numpy() * 100
@@ -106,9 +97,11 @@ def keras_cost(p):
 
 # In my case, for this simple NN, the number of parameters
 # is 3051. Nota che NON dipende dalla funzione costo, eh.
-NN_dimension = classification_model().count_params()
+NN_dimension = model.count_params()
+myparams = np.random.uniform(0, 1, NN_dimension)
+for_keras = params_to_keras(myparams)
 print("Just a LOSS evaluation with random coefficients:", 
-                   int(keras_cost(np.random.uniform(-1, 1, NN_dimension))))
+                                                int(keras_cost(myparams)))
 
 #### FANTASTICO!!!! Dunque, allora adesso ho PERFETTAMENTE la mia
 # funzione potenziale!!
