@@ -29,8 +29,6 @@ def checkDomain (x, L=10):
 # RETURN        : the couple (x_n, 0), rejection, or (x_n+1, 1), acceptance.
 def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
     d = len(x)
-    if (verbose):   
-        print("Potential in x_n: ", pot(x))
     y = x + sqrt(h) * loc_sampler.multivariate_normal(np.zeros(d), I(d))
 
     # Check that the proposed point falls into the domain
@@ -44,9 +42,9 @@ def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
         print("Warning: more than 20 attempts _done_ to stay in domain")
 
     # Determine if to accept the new point or not
-    if (verbose):
-        print("Potential in x_n+1:", pot(y))
-        print("Norm (x_n - x_n+1):", norm(x - y))
+    if (verbose):   
+        print("Pot(x): ", int(pot(x)), "Pot.(y): ", 
+                int(pot(y)), "x-y = ", norm(x-y))
     log_alpha = min(pot(x) - pot(y), 0)
     if log(loc_sampler.uniform()) < log_alpha:
         return y, 1
@@ -67,6 +65,7 @@ def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
 # loc_seed  : None as default. When integer, enable a local seed for parallel.
 # RETURNS   : (chain, infos, acceptance rate, expectation value)
 def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
+    copy_x = np.copy(startx)
     chain_sampler = np.random.RandomState(loc_seed)
     # Burning rate. 5 = 20%
     brate = 5
@@ -81,6 +80,7 @@ def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
     # Produce a single sample, with time estimation
     start_time = time.time()
     xnew, isaccepted = stepRW(startx, h, pot, L, verbose - 1, chain_sampler)
+    acceptrate += isaccepted
     timesample = time.time() - start_time
     btime = timesample * (bsamples - 1)
     timetotal = btime + nsamples * timesample * thin
@@ -89,28 +89,35 @@ def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
         print("Approx. burning time: ", str(tdelta(seconds = int(btime))))
         print("...burning time started.")
     for i in range(bsamples - 1):
-        xnew, isaccepted = stepRW(startx, h, pot, L, verbose-1, chain_sampler)
+        xnew, isaccepted = stepRW(xnew, h, pot, L, verbose-1, chain_sampler)
+        acceptrate += isaccepted
     if (verbose):
         print("burning time ended. Actual Markov Chain started.")
     xsamples = []
     # From now, consider the thinning rate (i.e. skip every thin-1 samples)
     for i in range(nsamples):
         for l in range(thin):
-             xnew, isaccepted = stepRW(startx,h,pot,L,verbose-1, chain_sampler)
+             xnew, isaccepted = stepRW(xnew,h,pot,L,verbose-1, chain_sampler)
              acceptrate += isaccepted
         xsamples.append(xnew)
         if (verbose and (i % 1000 == 0)):
             print("Sample #", i)
     # Information to return, useful to reproduce the results
+    xsamples = np.asanyarray(xsamples)
+    acceptrate = acceptrate * 100. / (bsamples + nsamples * thin)
+    expect = sum([x for x in xsamples]) / len(xsamples)
+    #expect = xsamples.mean() <- WRONG
     info = str(tdelta(seconds=int(time.time()-start_time))) + " accept_rate" +\
            str(acceptrate) + "%, thinning: " + str(thin)+ "Domain: "+ str(L)
-    xsamples = np.asanyarray(xsamples)
-    expect = xsamples.mean()
     if (verbose):
         print("--- end of the chain---\nBurned samples: ", bsamples)
         print("Thinning rate: ", thin, "\nEffective samples: ", nsamples)
         print("Total chain lenght: ", totsamples)
         print("Chain expectations: ", expect)
+        print("Acceptance rate: ", acceptrate, "%")
+        print("h: ", h)
+        print("L: ", L)
+        print("Starting point: ", copy_x)
     return xsamples, info, acceptrate, expect
 
 
@@ -183,8 +190,15 @@ def multiRW (dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
         X.append(chains[np.random.random_integers(0, nchains -1)][-nth])
     X = np.asanyarray(X)
     acceptrates = np.asanyarray(acceptrates)
-    mean_acceptance = acceptrates.mean() #sum(arates) / len(arates)
+    mean_acceptance = sum([x for x in acceptrates]) / len(acceptrates)
     print("Averge rate: ", mean_acceptance)
-    expect = X.mean() #sum([x for x in X]) / n_samples
+    expect = sum([x for x in X]) / nsamples
     print("Multichain expectation: ", expect)
     return X, mean_acceptance, expect
+
+
+
+#### Run multiple instances of Monte Carlo chains and collect their
+# expectations. It is a tool to check convergence: if they converge,
+# they must be gaussians in every marginal. Such a checking is done 
+# independently. The following functions just run the multi
