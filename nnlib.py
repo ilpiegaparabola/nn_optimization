@@ -9,25 +9,25 @@ def ber():
     return 1.
 
 # Global variables that defines my Newtwork on which to experiment
-NUM_INPUTS = 2
-NUM_HIDDEN_LAYERS = 3
-NUM_NODES_HIDDEN = [4, 4, 2]
-NUM_NODES_OUTPUT = 1
-global_N_points = 10
-old_seed = np.random.get_state()
-np.random.seed(3)
-global_X = np.random.uniform(size = [global_N_points, 2])
-global_y = np.array([ber() for i in range(global_N_points)])
-np.random.set_state(old_seed)
+#NUM_INPUTS = 2
+#NUM_HIDDEN_LAYERS = 3
+#NUM_NODES_HIDDEN = [4, 4, 2]
+#NUM_NODES_OUTPUT = 1
+#global_N_points = 10
+#old_seed = np.random.get_state()
+#np.random.seed(3)
+#global_X = np.random.uniform(size = [global_N_points, 2])
+#global_y = np.array([ber() for i in range(global_N_points)])
+#np.random.set_state(old_seed)
 
-def plot_data():
+def plot_data(X, y):
     X1 = []
     X0 = []
-    for i in range(len(global_y)):
-        if global_y[i] == 1:
-            X1.append(global_X[i])
+    for i in range(len(y)):
+        if y[i][0] == 1:
+            X1.append(X[i])
         else:
-            X0.append(global_X[i])
+            X0.append(X[i])
     X1 = np.asanyarray(X1)
     X0 = np.asanyarray(X0)
     plt.scatter(X0[:, 0], X0[:, 1], color = 'red')
@@ -36,46 +36,33 @@ def plot_data():
     plt.show()
 
 
-def get_num_params():
-    tot = NUM_INPUTS * NUM_NODES_HIDDEN[0] + NUM_NODES_HIDDEN[0]
-    for i in range(1, NUM_HIDDEN_LAYERS + 1):
-        if (i == NUM_HIDDEN_LAYERS):
-            tot += NUM_NODES_HIDDEN[i-1] * NUM_NODES_OUTPUT + NUM_NODES_OUTPUT
+def get_num_params(num_nodes_hidden, num_inputs = 2, num_output = 2):
+    num_hidden_layers = len(num_nodes_hidden)
+    tot = num_inputs * num_nodes_hidden[0] + num_nodes_hidden[0]
+    for i in range(1, num_hidden_layers + 1):
+        if (i == num_hidden_layers):
+            tot += num_nodes_hidden[i-1] * num_output + num_output
         else:
-            tot += NUM_NODES_HIDDEN[i-1] * NUM_NODES_HIDDEN[i] + \
-                   NUM_NODES_HIDDEN[i]
+            tot += num_nodes_hidden[i-1] * num_nodes_hidden[i] + \
+                   num_nodes_hidden[i]
     print("This model requires ", tot, "parameters")
     return tot
 
-# Step 1: a function that, given the neural network structure and an array of the right
-# lenghts, create a NN with parameters as in the array
-def init_network(params, num_inputs, num_hidden_layers, 
-                                    num_nodes_hidden, num_nodes_output):
 
+# Create a NN with default structure from R^2 to R.
+def init_network(params, num_nodes_hidden, num_inputs = 2, num_output = 2):
+    num_hidden_layers = len(num_nodes_hidden)
     num_nodes_previous = num_inputs # number of nodes in the previous layer
     network = {}
     offset = 0
-
-    # DEBUG function: just compute the number of parameters
-    num_params = num_inputs * num_nodes_hidden[0] + num_nodes_hidden[0]
-    for i in range(1, num_hidden_layers + 1): 
-        if (i == num_hidden_layers):
-            num_params += num_nodes_hidden[i-1] * num_nodes_output + num_nodes_output
-        else:
-            num_params += num_nodes_hidden[i-1] * num_nodes_hidden[i] + num_nodes_hidden[i]
-#    print("Total number of network parameters: ", num_params)
-
-    if (len(params) != num_params):
-        print("ERROR: wrong parameters dimension")
-    if (num_hidden_layers != len(num_nodes_hidden)):
-        print("ERROR: wrong input")
     
-    # loop through each layer and initialize the weights and biases associated with each layer
+    # loop through each layer and initialize the weights and biases 
+    # associated with each layer
     for layer in range(num_hidden_layers + 1):
         # Start by giving names to each layer
         if layer == num_hidden_layers:
             layer_name = 'output' # name last layer in the network output
-            num_nodes = num_nodes_output
+            num_nodes = num_output
         else:
             layer_name = 'layer_{}'.format(layer + 1)
             num_nodes = num_nodes_hidden[layer]
@@ -85,87 +72,57 @@ def init_network(params, num_inputs, num_hidden_layers,
         for node in range(num_nodes):
             node_name = 'node_{}'.format(node+1)
             network[layer_name][node_name] = {
-                'weights': np.asanyarray(params[offset:offset+num_nodes_previous]),
+                'weights': \
+                      np.asanyarray(params[offset:offset+num_nodes_previous]),
                 'bias'   : np.asanyarray(params[offset + num_nodes_previous])
             }
             offset = offset + num_nodes_previous + 1
-            #    'weights': np.around(np.random.uniform(size=num_nodes_previous), decimals=2),
-            #    'bias': np.around(np.random.uniform(size=1), decimals=2),
-            #}
         num_nodes_previous = num_nodes
 
-    return network # return the network
-
-
-### DEBUG variable
-p = [i for i in range(1, 60)]
-small_network2 = init_network(p, 2, 3, [2, 2, 2], 1)
-small_network = init_network(p, 5, 3, [3, 2, 3], 1)
-small_network_OK = init_network(p, 2, 3, [3, 3, 2], 1)
-
-### Step 2: given an input, evaluate a network
+    return network
 
 
 def compute_weighted_sum(inputs, weights, bias):
     return np.sum(inputs * weights) + bias
 
-def sigmoid(x):
-    return 1.0 / (1.0 + exp(-x))
+#def sigmoid(x):
+#    return 1.0 / (1.0 + exp(-x))
 
 # Define the ReLU function
 def node_activation(weighted_sum):
-    return sigmoid(weighted_sum)
-#    return max(0., weighted_sum)
+    return max(0., weighted_sum)
+
+# 
+def softmax(vv):
+    v = np.copy(vv)
+    for i in range(len(v)):
+        v[i] = np.exp(v[i])
+    return v / np.sum(v)
 
 
 def forward_propagate(network, inputs):
-
-    layer_inputs = list(inputs) # start with the input layer as the input to the first hidden layer
-
+    # start with the input layer as the input to the first hidden layer
+    layer_inputs = list(inputs)     
     for layer in network:
-
         layer_data = network[layer]
-
         layer_outputs = []
         for layer_node in layer_data:
-
             node_data = layer_data[layer_node]
-
-            # compute the weighted sum and the output of each node at the same time
-            node_output = node_activation(compute_weighted_sum(layer_inputs, node_data['weights'], node_data['bias']))
-#            layer_outputs.append(np.around(node_output[0], decimals=4))
+            # compute the weighted sum and the output 
+            # of each node at the same time
+            node_output = node_activation(compute_weighted_sum(layer_inputs, 
+                                    node_data['weights'], node_data['bias']))
             layer_outputs.append(node_output)
 
 #        if layer != 'output':
-#            print('The outputs of the nodes in hidden layer number {} is {}'.format(layer.split('_')[1], layer_outputs))
+#            print("Node output nodes hlayer number {}: {}"\
+#                            .format(layer.split('_')[1], layer_outputs))
 
-        layer_inputs = layer_outputs # set the output of this layer to be the input to next layer
-
-#    network_predictions = sigmoid(layer_outputs[0])
-    network_predictions = layer_outputs[0]
+        # set the output of this layer to be the input to next layer
+        layer_inputs = layer_outputs     
+        network_predictions = softmax(layer_outputs)
     return network_predictions
 
-# STEP 2: some good datapoint
-def into01(y):
-    ypred = np.copy(y)
-    for i in range(len(ypred)):
-        if ypred[i] >= 1. :
-            ypred[i] = 0.99
-        elif ypred[i] <= 0.:
-            ypred[i] = 0.01
-    return ypred
-
-def binary_cross(ytrue, ypred):
-    n = len(ytrue)
-    ypred = into01(ypred)
-    sm = 0.
-    for i in range(n):
-        if (ypred[i] > 0. and ypred[i] < 1.):
-            sm += ytrue[i] * log(ypred[i]) + \
-                    (1. - ytrue[i]) * log(1. - ypred[i])
-        else:
-            input("Cross entropy error")
-    return (- sm / n) * 100.
 
 
 def l2square(ytrue, ypred):
@@ -179,70 +136,79 @@ def l2square(ytrue, ypred):
 # STEP 3: define the loss function
 # THE LOSS AND ACCURACY  FUNCTION MUST BE THE ONLY 
 # ONE DEPENDING ON GLOBAL VARIABLES
-def loss(p):
+def loss(X, y, p, num_nodes_hidden, num_inputs = 2, num_output = 2):
     # Create a Network
-    #loc_nn = init_network(p, 2, 3, [3, 3, 2], 1)
-    loc_nn = init_network(p, NUM_INPUTS, NUM_HIDDEN_LAYERS, 
-                                        NUM_NODES_HIDDEN, NUM_NODES_OUTPUT)
-    # Evaluate each datapoint on the created newtork
-    y_hat = np.array([forward_propagate(loc_nn, global_X[i]) \
-            for i in range(global_N_points)])
-#    print("True: \t\t", global_y)
-#    print("Predicted: \t", y_hat)
-#    input("OK?")
-    # Binary entropy loss function ?
-    return l2square(global_y, y_hat)
-#    return binary_cross(global_y, y_hat)
-
-
+    n = len(X)
+    loc_nn = init_network(p, num_nodes_hidden, num_inputs, num_output)
+     # Evaluate each datapoint on the created newtork
+    y_hat = np.array([forward_propagate(loc_nn, X[i]) for i in range(n)])
+    yt = y[:,0]
+    yp = y_hat[:,0]
+    sm = np.sum([yt[i]*log(yp[i]) + (1-yt[i])*log(1-yp[i]) for i in range(n)])
+    return (-sm * 100) / n
+#    return l2square(y, y_hat)
 
 
 def from_prob_to_01(yyy):
     yy = np.copy(yyy)
     for i in range(len(yy)):
-        if yy[i] < 0.5:
-            yy[i] = 0.
+        if yy[i][0] < yy[i][1]:
+            yy[i][0] = 0.
+            yy[i][1] = 1.
         else:
-            yy[i] = 1.
+            yy[i][0] = 1.
+            yy[i][1] = 0.
     return yy
 
 
-def accuracy(p):
-    loc_nn = init_network(p, NUM_INPUTS, NUM_HIDDEN_LAYERS,
-                                        NUM_NODES_HIDDEN, NUM_NODES_OUTPUT)
+def accuracy(X, y, p, num_nodes_hidden, num_inputs = 2, num_output = 2):
+    len_dataset = len(X)
+    loc_nn = init_network(p, num_nodes_hidden, num_inputs, num_output)
     # Evaluate each datapoint on the created newtork
-    y_hat = np.array([forward_propagate(loc_nn, global_X[i])\
-            for i in range(global_N_points)])
+    y_hat = np.array([forward_propagate(loc_nn, X[i]) \
+                                                for i in range(len_dataset)])
+#    print("--- accuracy debug ---")
+#    print("Parameters: ", p)
+#    print("y_hat (R): ", y_hat)
     y_hat = from_prob_to_01(y_hat)
+#    print("y_hat (01): ", y_hat)
+#    print("true y: ", y)
     correct = 0
     for i in range(len(y_hat)):
-        if (global_y[i] == y_hat[i]):
+        # Since are 1/0, to check equality is enough using the first coordinate
+        if (y[i][0] == y_hat[i][0]):
             correct += 1
     return correct * 100 / len(y_hat)
 
 
-def from_R_to_prob(yy):
-    yyy = np.copy(yy)
-    for i in range(len(yyy)):
-        yyy[i] = sigmoid(yyy[i])
-    return yyy
+#def from_R_to_prob(yy):
+#    yyy = np.copy(yy)
+#    for i in range(len(yyy)):
+#        yyy[i] = sigmoid(yyy[i])
+#    return yyy
 
-def accuracy_with_l2err(p):
- # Create a Network
-    loc_nn = init_network(p, NUM_INPUTS, NUM_HIDDEN_LAYERS,
-                                        NUM_NODES_HIDDEN, NUM_NODES_OUTPUT)
-    # Evaluate each datapoint on the created newtork
-    y_hat = np.array([forward_propagate(loc_nn, global_X[i]) \
-            for i in range(global_N_points)])
-    print("Initial y predict: ", y_hat)
-    y_hat = from_R_to_prob(y_hat)
-    print("To [0,1]: ", y_hat)
-    y_hat = from_prob_to_01(y_hat)
-    print("to labels:: ", y_hat)
-    print("True labels: ", global_y)
-    correct = 0
-    for i in range(len(y_hat)):
-        if (global_y[i] == y_hat[i]):
-            correct += 1
-    return correct * 100 / len(y_hat)
+
+if __name__ == '__main__':
+    print("Entering debug mode")
+    N_points = 10
+    #X_dataset = np.array([[0.1, 0.1], [9, 9]])
+    X_dataset = np.random.uniform(size = [N_points, 2])
+    y_dataset = np.zeros(N_points * 2)
+    for i in range(N_points):
+        if (i < N_points/2):
+            y_dataset[2 * i] = 1
+        else:
+            y_dataset[2 * i + 1] = 1
+    y_dataset.shape  = (N_points, 2)
+    nn_num_nodes_hidden = [3, 4]
+    d = get_num_params(nn_num_nodes_hidden)
+    L = 1
+    def ACC(x):
+        return accuracy(X_dataset, y_dataset, x, nn_num_nodes_hidden)
+    def U(x):
+        return loss(X_dataset, y_dataset, x, nn_num_nodes_hidden)
+    for i in range(10):
+        p = (np.random.uniform(-L, L, d))
+        print(ACC(p))
+        print(U(p))
 

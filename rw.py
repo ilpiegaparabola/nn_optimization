@@ -42,7 +42,7 @@ def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
         print("Warning: more than 20 attempts _done_ to stay in domain")
 
     # Determine if to accept the new point or not
-    if (verbose):   
+    if (verbose == 2):   
         print("Pot(x): ", int(pot(x)), "Pot.(y): ", 
                 int(pot(y)), "x-y = ", norm(x-y))
     log_alpha = min(pot(x) - pot(y), 0)
@@ -65,10 +65,9 @@ def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
 # loc_seed  : None as default. When integer, enable a local seed for parallel.
 # RETURNS   : (chain, infos, acceptance rate, expectation value)
 def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
-    copy_x = np.copy(startx)
     chain_sampler = np.random.RandomState(loc_seed)
     # Burning rate. 5 = 20%
-    brate = 5
+    brate = 8 # 5
     # nsamples is basically the lenght of the chain without burning time
     # we need to compute the total lenght, too, to give time running estimation
     totsamples = brate * nsamples / (brate - 1.)
@@ -96,12 +95,18 @@ def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
     xsamples = []
     # From now, consider the thinning rate (i.e. skip every thin-1 samples)
     for i in range(nsamples):
-        for l in range(thin):
+        for l in range(thin-1):
              xnew, isaccepted = stepRW(xnew,h,pot,L,verbose-1, chain_sampler)
              acceptrate += isaccepted
-        xsamples.append(xnew)
-        if (verbose and (i % 1000 == 0)):
+        if (verbose and (i % 5000 == 0)):
             print("Sample #", i)
+            xnew, isaccepted = stepRW(xnew,h,pot,L, 2, chain_sampler)
+        else:
+            xnew, isaccepted = stepRW(xnew,h,pot,L,verbose-1, chain_sampler)
+        acceptrate += isaccepted
+        xsamples.append(xnew)
+#        if (verbose and (i % 1000 == 0)):
+#            print("Sample #", i)
     # Information to return, useful to reproduce the results
     xsamples = np.asanyarray(xsamples)
     acceptrate = acceptrate * 100. / (bsamples + nsamples * thin)
@@ -117,7 +122,6 @@ def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
         print("Acceptance rate: ", acceptrate, "%")
         print("h: ", h)
         print("L: ", L)
-        print("Starting point: ", copy_x)
     return xsamples, info, acceptrate, expect
 
 
@@ -161,7 +165,7 @@ def multiRW (dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
         startpoints.append(np.random.uniform(-L, L, dimx))
     # Run a single chain to have a time estimation
     starttime = time.time()
-    addChain(chainRW(startpoints[0], h, pot, nsamples, thin, L, False, None))
+    addChain(chainRW(startpoints[0], h, pot, nsamples, thin, L, 2, None))
     if (verbose):
         linear_time = int((time.time() - starttime) * nchains)
         optim_time = linear_time / parallelchains
@@ -174,7 +178,7 @@ def multiRW (dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
 #    print("FLAG2")
     for j in range(1, nchains):
         pool.apply_async(chainRW, args = (startpoints[j], h, pot, nsamples,
-                                      thin, L, False, j), callback = addChain)
+                                      thin, L, 2, j), callback = addChain)
     pool.close()
     pool.join()
 #    print("FLAG3")
@@ -197,8 +201,29 @@ def multiRW (dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
     return X, mean_acceptance, expect
 
 
-
 #### Run multiple instances of Monte Carlo chains and collect their
 # expectations. It is a tool to check convergence: if they converge,
 # they must be gaussians in every marginal. Such a checking is done 
 # independently. The following functions just run the multi
+# Convergence for the random walk multichain metropolis
+def convRW(nsimu, dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
+    print("--- CONVERGENCE of multichain RW method ---")
+    print("(each chain the combination of", nchains, "chains)")
+    print("We run a total of ", nsimu, "simulations, taking exp from each")
+    # Just run n_conv instances of multichainRW and take their expectations
+    expects = []
+    arates = 0
+    # Run a single chain just to give a time estimation
+    start_time = time.time()
+    _, rate, xp = multiRW(dimx, h, pot, nsamples, nchains, thin, L)
+    expects.append(xp)
+    arates += rate
+    linear_run_time = int((time.time() - start_time) * nsimu)
+    print("Approx. run time: " + str(tdelta(seconds = linear_run_time)))
+    for i in range(1, nsimu):
+        print("Chain ", i+1, "of", nsimu)
+        _, rate, xp = multiRW(dimx, h, pot, nsamples, nchains, thin, L)
+        expects.append(xp)
+        arates += rate
+    print("Average acceptance rate: ", arates / nsimu)
+    return expects
