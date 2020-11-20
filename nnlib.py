@@ -1,3 +1,8 @@
+## TO CHECK BETTER:
+# - forward evaluation
+# - binary entropy
+
+
 # This is a very simple library to generate naive Neural Networks
 import numpy as np
 from numpy import log, exp
@@ -144,7 +149,11 @@ def loss(X, y, p, num_nodes_hidden, num_inputs = 2, num_output = 2):
     y_hat = np.array([forward_propagate(loc_nn, X[i]) for i in range(n)])
     yt = y[:,0]
     yp = y_hat[:,0]
-    sm = np.sum([yt[i]*log(yp[i]) + (1-yt[i])*log(1-yp[i]) for i in range(n)])
+    sm = 0
+    for i in range(n):
+        if (yp[i] > 0 and yp[i] < 1):
+                sm += yt[i]*log(yp[i]) + (1-yt[i])*log(1-yp[i])
+    #sm = np.sum([yt[i]*log(yp[i]) + (1-yt[i])*log(1-yp[i]) for i in range(n)])
     return (-sm * 100) / n
 #    return l2square(y, y_hat)
 
@@ -211,4 +220,3 @@ if __name__ == '__main__':
         p = (np.random.uniform(-L, L, d))
         print(ACC(p))
         print(U(p))
-

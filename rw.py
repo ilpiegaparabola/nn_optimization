@@ -28,6 +28,12 @@ def checkDomain (x, L=10):
 #                   allow different seeds needed for parallelization
 # RETURN        : the couple (x_n, 0), rejection, or (x_n+1, 1), acceptance.
 def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
+    
+    tol = 1e-05
+    if (pot(x)) < tol:
+        print("WARNING! VERY LOW POTENTIAL!", pot(x))
+#        input("PRESS ENTER")
+
     d = len(x)
     y = x + sqrt(h) * loc_sampler.multivariate_normal(np.zeros(d), I(d))
 
@@ -87,6 +93,7 @@ def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
         print("Approx. _total_ time: ", str(tdelta(seconds = int(timetotal))))
         print("Approx. burning time: ", str(tdelta(seconds = int(btime))))
         print("...burning time started.")
+        input("PRESS ENTER")
     for i in range(bsamples - 1):
         xnew, isaccepted = stepRW(xnew, h, pot, L, verbose-1, chain_sampler)
         acceptrate += isaccepted

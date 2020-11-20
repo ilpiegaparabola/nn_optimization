@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from numpy import cos, sin
 
 
-theta = 0 # 120 # 240
+theta = 120 # 240
 
 def rotate(x, theta):
     # x in R^2, theta rotational angle
@@ -22,7 +22,7 @@ def rotate(x, theta):
 # 2-dimensional points, and giving an scalar output according to the
 # point classification. You need to specify a list containing the number
 # of nodes for each hidden layer.
-nn_num_nodes_hidden = [2, 2]
+nn_num_nodes_hidden = [2]
 
 # Generate the random points to classify
 N_points = 10
@@ -66,9 +66,9 @@ L = 10
 nchains = 48
 
 
-SAMPLING_SINGLE_CHAIN = False #True #True
-SAMPLING_TO_CHECK_CONVERGENCE = True #False #True
-SIMPLE_RW = 0 #True # When false, performs the more efficient multichain
+SAMPLING_SINGLE_CHAIN = True #True
+SAMPLING_TO_CHECK_CONVERGENCE = False #True #False #True
+SIMPLE_RW = 1 #True # When false, performs the more efficient multichain
 
 
 if SAMPLING_SINGLE_CHAIN:
@@ -78,7 +78,7 @@ if SAMPLING_SINGLE_CHAIN:
         startx = np.random.uniform(-L, L, d)
         print("Starting accuracy: ", ACC(startx))
         print("Starting loss: ", U(startx))
-        input("")
+        input("PRESS ENTER")
         X, info_str, arate, _ = rw.chainRW(startx, h, U, nsamples, thin, 
                                                                 L, verbose = 2)
         print("Starting point: ", startx)
