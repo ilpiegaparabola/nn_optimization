@@ -220,6 +220,7 @@ def convRW(nsimu, dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
     arates += rate
     linear_run_time = int((time.time() - start_time) * nsimu)
     print("Approx. run time: " + str(tdelta(seconds = linear_run_time)))
+    input("press ENTER to continue")
     for i in range(1, nsimu):
         print("Chain ", i+1, "of", nsimu)
         _, rate, xp = multiRW(dimx, h, pot, nsamples, nchains, thin, L)

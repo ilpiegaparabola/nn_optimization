@@ -22,7 +22,7 @@ def rotate(x, theta):
 # 2-dimensional points, and giving an scalar output according to the
 # point classification. You need to specify a list containing the number
 # of nodes for each hidden layer.
-nn_num_nodes_hidden = [1]
+nn_num_nodes_hidden = [2, 2]
 
 # Generate the random points to classify
 N_points = 10
@@ -62,11 +62,11 @@ h = 0.1
 nsamples = 20000
 thin = 5
 nsimu_convergence = 500
-L = 5
+L = 10
 nchains = 48
 
 
-SAMPLING_SINGLE_CHAIN = True #True
+SAMPLING_SINGLE_CHAIN = False #True #True
 SAMPLING_TO_CHECK_CONVERGENCE = True #False #True
 SIMPLE_RW = 0 #True # When false, performs the more efficient multichain
 
