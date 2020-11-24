@@ -66,8 +66,8 @@ L = 10
 nchains = 48
 
 
-SAMPLING_SINGLE_CHAIN = False #True
-SAMPLING_TO_CHECK_CONVERGENCE = True #True #False #True
+SAMPLING_SINGLE_CHAIN = True
+SAMPLING_TO_CHECK_CONVERGENCE = False#True #True #False #True
 SIMPLE_RW = 1 #True # When false, performs the more efficient multichain
 
 
@@ -81,6 +81,7 @@ if SAMPLING_SINGLE_CHAIN:
 #        input("PRESS ENTER")
         X, info_str, arate, _ = rw.chainRW(startx, h, U, nsamples, thin, 
                                                                 L, verbose = 2)
+        info_str += '\n'
         print("Starting point: ", startx)
         print("Classifiation accuracy using the last sample: ", ACC(X[-1]))
 
@@ -88,7 +89,7 @@ if SAMPLING_SINGLE_CHAIN:
     else:
         print("...multichain RW approach")
         X, arate, _  = rw.multiRW(d, h, U, nsamples, nchains, thin, L)
-        info_str = "INFOSIMU: Multichain RW"
+        info_str = "INFOSIMU: Multichain RW\n"
         print("Classifiation accuracy using the last sample: ", ACC(X[-1]))
 
 

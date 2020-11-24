@@ -2,6 +2,7 @@ import numpy as np
 from numpy import cos, sin
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import sys
 import mcmc
 from sklearn.decomposition import PCA, KernelPCA
@@ -79,7 +80,8 @@ if DETECT_SUBMANIFOLD:
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(reducedXrbf[:,0], reducedXrbf[:,1], reducedXrbf[:,2])
     plt.title("3D reduction of the " + str(m) + "D parameter with rbf kernel")
-    plt.show()    
+    plt.savefig("ALLDATA.png")
+#    plt.show()    
 
     reconstructedX = kpcaRBF.inverse_transform(reducedXrbf)
     print("Reconstructing error: ", norm(X - reconstructedX))
@@ -123,6 +125,9 @@ if DETECT_SUBMANIFOLD:
         print("its accuracy: ", ACC(reconstructedX[i]))
         if Ui < max_energy:
             labels[i] = 1 
+            print("Energy of point", i, ":", Ui)
+            print("its accuracy: ", ACC(reconstructedX[i]))
+            input("OK?")
     input("OK?")
 
     # Subdivide the points into two classes, then print each of them
@@ -145,4 +150,28 @@ if DETECT_SUBMANIFOLD:
     ax.scatter(lowX[:,0], lowX[:,1], lowX[:,2], color='red')
     plt.title("Distribution of the low energy points in" +\
           "the 3D reduced space")
-    plt.show()
+    plt.savefig("MANIFOLD.png")
+#    plt.show()
+
+    # Perform a classic PCA reduction on the low-energy space,
+    # which seem to be located on a line...
+    pcaLOW = PCA(n_components=1)
+    pcaLOW.fit(lowX)
+    pcaLOW.explained_variance_ratio_
+    print("How well do the points fit a line? ",
+                        sum(pcaLOW.explained_variance_ratio_)* 100, "%")
+
+    minimumX = pcaLOW.transform(lowX)
+    print("PCA error: ", norm(minimumX - pcaLOW.inverse_transform(minimumX)))
+
+
+
+    pcaLOW = PCA(n_components=2)
+    pcaLOW.fit(lowX)
+    pcaLOW.explained_variance_ratio_
+    print("How well do the points fit a plane? ",
+                        sum(pcaLOW.explained_variance_ratio_)* 100, "%")
+
+    minimumX = pcaLOW.transform(lowX)
+    print("PCA error: ", norm(minimumX - pcaLOW.inverse_transform(minimumX)))
+
