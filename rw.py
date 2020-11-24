@@ -29,9 +29,9 @@ def checkDomain (x, L=10):
 # RETURN        : the couple (x_n, 0), rejection, or (x_n+1, 1), acceptance.
 def stepRW (x, h, pot, L, verbose = True, loc_sampler = np.random):
     
-    tol = 1e-05
-    if (pot(x)) < tol:
-        print("WARNING! VERY LOW POTENTIAL!", pot(x))
+#    tol = 1e-05
+#    if (pot(x)) < tol:
+#        print("WARNING! VERY LOW POTENTIAL!", pot(x))
 #        input("PRESS ENTER")
 
     d = len(x)
@@ -89,16 +89,16 @@ def chainRW (startx, h, pot, nsamples, thin=1, L=5, verbose=2, loc_seed =None):
     timesample = time.time() - start_time
     btime = timesample * (bsamples - 1)
     timetotal = btime + nsamples * timesample * thin
-    if (verbose):
-        print("Approx. _total_ time: ", str(tdelta(seconds = int(timetotal))))
-        print("Approx. burning time: ", str(tdelta(seconds = int(btime))))
-        print("...burning time started.")
-        input("PRESS ENTER")
+#    if (verbose):
+#        print("Approx. _total_ time: ", str(tdelta(seconds = int(timetotal))))
+#        print("Approx. burning time: ", str(tdelta(seconds = int(btime))))
+#        print("...burning time started.")
+        #input("PRESS ENTER")
     for i in range(bsamples - 1):
         xnew, isaccepted = stepRW(xnew, h, pot, L, verbose-1, chain_sampler)
         acceptrate += isaccepted
-    if (verbose):
-        print("burning time ended. Actual Markov Chain started.")
+#    if (verbose):
+#        print("burning time ended. Actual Markov Chain started.")
     xsamples = []
     # From now, consider the thinning rate (i.e. skip every thin-1 samples)
     for i in range(nsamples):
@@ -216,7 +216,9 @@ def multiRW (dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
 def convRW(nsimu, dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
     print("--- CONVERGENCE of multichain RW method ---")
     print("(each chain the combination of", nchains, "chains)")
-    print("We run a total of ", nsimu, "simulations, taking exp from each")
+    print("We run a total of ", nsimu, "simulations, taking E from each")
+    print("Ready to run the first chain!")
+##    input("PRESS ENTER TO CONTINUE")
     # Just run n_conv instances of multichainRW and take their expectations
     expects = []
     arates = 0
@@ -227,7 +229,7 @@ def convRW(nsimu, dimx, h, pot, nsamples, nchains, thin, L, verbose = True):
     arates += rate
     linear_run_time = int((time.time() - start_time) * nsimu)
     print("Approx. run time: " + str(tdelta(seconds = linear_run_time)))
-    input("press ENTER to continue")
+##    input("PRESS ENTER TO CONTINUE")
     for i in range(1, nsimu):
         print("Chain ", i+1, "of", nsimu)
         _, rate, xp = multiRW(dimx, h, pot, nsamples, nchains, thin, L)

@@ -98,11 +98,13 @@ def node_activation(weighted_sum):
     return max(0., weighted_sum)
 
 # 
-def softmax(vv):
-    v = np.copy(vv)
-    for i in range(len(v)):
-        v[i] = np.exp(v[i])
-    return v / np.sum(v)
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+#    v = np.copy(vv)
+#    for i in range(len(v)):
+#        v[i] = np.exp(v[i])
+#    return v / np.sum(v)
 
 
 def forward_propagate(network, inputs):
